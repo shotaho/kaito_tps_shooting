@@ -3,86 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Voxel Tokyo Strike - Ver 0.3.2</title>
+    <title>Voxel Tokyo Strike - Ver 0.3.3</title>
     <style>
-        :root { --ui-blue: #0044ff; --ui-red: #ff3300; }
+        :root { --ui-blue: #0044ff; --ui-red: #ff3300; --ui-green: #22cc22; }
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: sans-serif; touch-action: none; }
         canvas { display: block; }
         
-        /* 画面共通設定 */
         .screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #87CEEB;
-            display: flex; flex-direction: column; justify-content: center;
-            align-items: center; color: #111; 
-            z-index: 9999; /* 圧倒的最前面 */
-            pointer-events: auto;
+            background: #87CEEB; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; color: #111; z-index: 9999;
         }
         .hidden { display: none !important; }
         
-        /* ボタンのデザイン（押しやすく大きく） */
+        /* ボタン */
         .start-btn {
             background: var(--ui-blue); color: white; border: 4px solid white;
-            padding: 25px 60px; font-weight: bold; font-size: 28px;
-            border-radius: 50px; cursor: pointer;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-            -webkit-appearance: none; /* iOS対策 */
+            padding: 20px 50px; font-weight: bold; font-size: 24px; border-radius: 50px;
         }
-        .start-btn:active { transform: scale(0.95); background: #0033cc; }
 
-        /* ゲームプレイ用UI（最初は非表示） */
+        /* プレイ画面UI */
         #hud {
             position: absolute; top: 15px; left: 15px; color: #000;
             pointer-events: none; font-weight: bold; z-index: 50;
             background: rgba(255,255,255,0.7); padding: 10px; border-radius: 8px;
         }
         #minimap-container {
-            position: absolute; top: 15px; right: 15px;
-            width: 110px; height: 110px;
-            background: rgba(0, 0, 0, 0.4);
-            border: 3px solid white; border-radius: 50%;
+            position: absolute; top: 15px; right: 15px; width: 110px; height: 110px;
+            background: rgba(0, 0, 0, 0.4); border: 3px solid white; border-radius: 50%;
             overflow: hidden; z-index: 50;
         }
-        #ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 60; display: none; /* 初期は消す */
-        }
+        
+        /* 操作レイヤー */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; display: none; }
+        
+        /* 左手：ジョイスティック */
         #joystick-bound {
-            position: absolute; bottom: 40px; left: 40px;
-            width: 110px; height: 110px; border: 4px solid white;
-            border-radius: 50%; pointer-events: auto; background: rgba(255,255,255,0.2);
+            position: absolute; bottom: 40px; left: 40px; width: 110px; height: 110px;
+            border: 4px solid white; border-radius: 50%; pointer-events: auto; background: rgba(255,255,255,0.2);
         }
-        #joystick-stick {
-            position: absolute; top: 30px; left: 30px;
-            width: 50px; height: 50px; background: white; border-radius: 50%;
+        #joystick-stick { position: absolute; top: 30px; left: 30px; width: 50px; height: 50px; background: white; border-radius: 50%; }
+        
+        /* 右手：アクションボタン */
+        .action-btn {
+            position: absolute; pointer-events: auto; border: 4px solid white; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center; color: white; font-weight: bold;
         }
-        #shoot-btn {
-            position: absolute; bottom: 40px; right: 40px;
-            width: 100px; height: 100px; background: var(--ui-red);
-            border: 5px solid white; border-radius: 50%;
-            display: flex; justify-content: center; align-items: center;
-            color: white; font-weight: bold; pointer-events: auto;
-        }
+        #shoot-btn { bottom: 30px; right: 30px; width: 90px; height: 90px; background: var(--ui-red); font-size: 20px; }
+        #jump-btn { bottom: 135px; right: 45px; width: 65px; height: 65px; background: var(--ui-green); font-size: 14px; }
 
-        .version-info {
-            position: absolute; bottom: 30px; right: 30px;
-            font-size: 18px; font-weight: bold; color: #000;
-            background: rgba(255,255,255,0.8); padding: 5px 10px; border-radius: 5px;
-        }
+        .version-info { position: absolute; bottom: 20px; right: 20px; font-size: 14px; background: rgba(255,255,255,0.8); padding: 2px 8px; border-radius: 4px; color: #333; }
     </style>
 </head>
 <body>
 
-    <!-- スタート画面（最前面） -->
     <div id="start-screen" class="screen">
-        <h1 style="color: var(--ui-blue); font-size: 48px; margin-bottom: 5px;">TOKYO DEFENDER</h1>
-        <p style="margin-bottom: 40px; font-weight: bold;">Eliminate the Red Drones</p>
-        <!-- 確実に動くようにonclickを直接記述 -->
-        <button class="start-btn" onpointerdown="handleStartGame()" onclick="handleStartGame()">GAME START</button>
-        <div class="version-info">Ver 0.3.2</div>
+        <h1 style="color: var(--ui-blue); font-size: 36px; margin: 0;">TOKYO DEFENDER</h1>
+        <p>Ver 0.3.3: Collision & Jump Update</p>
+        <button class="start-btn" onpointerdown="handleStartGame()">GAME START</button>
     </div>
 
-    <!-- ゲームプレイ用UI -->
     <div id="hud" class="hidden">
         SCORE: <span id="ui-score">0</span><br>
         SHIELD: <span id="ui-hp">100</span>%
@@ -95,8 +75,11 @@
 
     <div id="ui-layer">
         <div id="joystick-bound"><div id="joystick-stick"></div></div>
-        <div id="shoot-btn">FIRE</div>
+        <div id="shoot-btn" class="action-btn">FIRE</div>
+        <div id="jump-btn" class="action-btn">JUMP</div>
     </div>
+
+    <div class="version-info">Ver 0.3.3</div>
 
     <script type="importmap">
         { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
@@ -108,8 +91,9 @@
         // --- ゲーム状態 ---
         window.state = { 
             gameActive: false, score: 0, hp: 100, 
-            enemies: [], bullets: [],
-            camYaw: 0, camPitch: 0 
+            enemies: [], bullets: [], buildings: [],
+            camYaw: 0, camPitch: 0,
+            vY: 0, isGrounded: true
         };
         
         const scene = new THREE.Scene();
@@ -122,11 +106,10 @@
         renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
-        // ライティング
-        const sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.8);
         sunLight.position.set(50, 120, 50);
         scene.add(sunLight);
-        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
 
         // 自機
         const playerGroup = new THREE.Group();
@@ -140,30 +123,52 @@
         playerGroup.add(head, body, armL, armR, legL, legR);
         scene.add(playerGroup);
 
-        // 街の作成
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), mat(0x999999));
-        ground.rotation.x = -Math.PI / 2;
-        scene.add(ground);
-        scene.add(new THREE.GridHelper(400, 20, 0xffffff, 0xbbbbbb));
-        for(let i=0; i<80; i++) {
-            const h = Math.random() * 25 + 5;
-            const b = new THREE.Mesh(new THREE.BoxGeometry(8, h, 8), mat(Math.random() > 0.5 ? 0xeeeeee : 0xcccccc));
-            let x = Math.random()*240-120; let z = Math.random()*240-120;
-            if(Math.abs(x) < 15) x += 30;
-            b.position.set(x, h/2, z); scene.add(b);
+        // 街の作成 & 当たり判定用データの保存
+        function createCity() {
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), mat(0x999999));
+            ground.rotation.x = -Math.PI / 2;
+            scene.add(ground);
+            scene.add(new THREE.GridHelper(400, 20, 0xffffff, 0xbbbbbb));
+
+            for(let i=0; i<80; i++) {
+                const h = Math.random() * 25 + 5;
+                const bSize = { w: 8, d: 8, h: h };
+                const b = new THREE.Mesh(new THREE.BoxGeometry(bSize.w, bSize.h, bSize.d), mat(Math.random() > 0.5 ? 0xeeeeee : 0xcccccc));
+                let x = Math.random()*240-120; let z = Math.random()*240-120;
+                if(Math.abs(x) < 15) x += 30; // 道路あけ
+                b.position.set(x, h/2, z);
+                scene.add(b);
+                // 当たり判定用データを保存
+                window.state.buildings.push({ x: x, z: z, w: bSize.w, d: bSize.d });
+            }
+        }
+        createCity();
+
+        // 衝突判定関数
+        function checkCollision(nx, nz) {
+            const margin = 0.6; // キャラクターの半径分
+            for (let b of window.state.buildings) {
+                if (nx > b.x - b.w/2 - margin && nx < b.x + b.w/2 + margin &&
+                    nz > b.z - b.d/2 - margin && nz < b.z + b.d/2 + margin) {
+                    return true; // 衝突あり
+                }
+            }
+            return false;
         }
 
         // 敵スポーン
         window.spawnEnemy = () => {
             const e = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), mat(0xff0000));
-            e.position.set(Math.random()*180-90, 5, Math.random()*180-90);
+            e.position.set(Math.random()*160-80, 5, Math.random()*160-80);
             window.state.enemies.push({ mesh: e, hp: 2 });
             scene.add(e);
         };
 
-        // 操作
+        // 操作系
         let moveInput = { x: 0, y: 0 };
         let joyTouchId = null; let lookTouchId = null; let lastLookPos = { x: 0, y: 0 };
+        let isShooting = false;
+        const MOVE_SPEED = 0.2; // 速度を下げた
 
         window.addEventListener('touchstart', e => {
             if (!window.state.gameActive) return;
@@ -196,24 +201,48 @@
             }
         });
 
-        let isShooting = false;
+        // ボタンイベント
         document.getElementById('shoot-btn').onpointerdown = () => isShooting = true;
         document.getElementById('shoot-btn').onpointerup = () => isShooting = false;
+        document.getElementById('jump-btn').onpointerdown = () => {
+            if (window.state.isGrounded) {
+                window.state.vY = 0.25;
+                window.state.isGrounded = false;
+            }
+        };
 
         // メインループ
         window.animate = () => {
             if (!window.state.gameActive) return;
 
+            // 回転計算
             playerGroup.rotation.y = window.state.camYaw;
             const dirForward = new THREE.Vector3(0, 0, -1).applyQuaternion(playerGroup.quaternion);
             const dirSide = new THREE.Vector3(1, 0, 0).applyQuaternion(playerGroup.quaternion);
-            playerGroup.position.add(dirForward.multiplyScalar(-moveInput.y * 0.45));
-            playerGroup.position.add(dirSide.multiplyScalar(moveInput.x * 0.45));
+            
+            // 次の予測位置を計算（当たり判定用）
+            const nextX = playerGroup.position.x + (dirForward.x * -moveInput.y + dirSide.x * moveInput.x) * MOVE_SPEED;
+            const nextZ = playerGroup.position.z + (dirForward.z * -moveInput.y + dirSide.z * moveInput.x) * MOVE_SPEED;
 
+            if (!checkCollision(nextX, playerGroup.position.z)) playerGroup.position.x = nextX;
+            if (!checkCollision(playerGroup.position.x, nextZ)) playerGroup.position.z = nextZ;
+
+            // ジャンプ・重力物理
+            playerGroup.position.y += window.state.vY;
+            if (playerGroup.position.y > 0) {
+                window.state.vY -= 0.012; // 重力
+            } else {
+                playerGroup.position.y = 0;
+                window.state.vY = 0;
+                window.state.isGrounded = true;
+            }
+
+            // カメラ追従
             const camPos = new THREE.Vector3(0, 2.5 + window.state.camPitch * 4, 7).applyQuaternion(playerGroup.quaternion).add(playerGroup.position);
             camera.position.lerp(camPos, 0.15);
             camera.lookAt(playerGroup.position.clone().add(new THREE.Vector3(0, 1.5, 0)));
 
+            // 射撃
             if(isShooting && Date.now() % 10 < 2) {
                 const b = new THREE.Mesh(new THREE.SphereGeometry(0.25), mat(0xffcc00));
                 b.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.3, 0));
@@ -222,6 +251,7 @@
                 scene.add(b);
             }
 
+            // 弾丸更新
             for(let i = window.state.bullets.length-1; i>=0; i--) {
                 const b = window.state.bullets[i]; b.mesh.position.add(b.dir.clone().multiplyScalar(1.6));
                 if(--b.life < 0) { scene.remove(b.mesh); window.state.bullets.splice(i, 1); continue; }
@@ -233,12 +263,12 @@
                 });
             }
 
-            // マップ更新
+            // ミニマップ更新
             document.getElementById('minimap-player').style.transform = `rotate(${-window.state.camYaw * 57.3}deg)`;
             const mapE = document.getElementById('minimap-enemies'); mapE.innerHTML = '';
             window.state.enemies.forEach(e => {
-                const dx = (e.mesh.position.x - playerGroup.position.x) * 0.55;
-                const dz = (e.mesh.position.z - playerGroup.position.z) * 0.55;
+                const dx = (e.mesh.position.x - playerGroup.position.x) * 0.5;
+                const dz = (e.mesh.position.z - playerGroup.position.z) * 0.5;
                 const d = document.createElement('div'); d.className = 'enemy-dot';
                 d.style.cssText = `position:absolute; width:6px; height:6px; background:red; border-radius:50%; left:calc(50% + ${dx}px); top:calc(50% + ${dz}px);`;
                 mapE.appendChild(d);
@@ -248,16 +278,12 @@
             requestAnimationFrame(window.animate);
         };
 
-        // グローバルに開始関数を公開
         window.handleStartGame = () => {
             if (window.state.gameActive) return;
-            console.log("Game Starting...");
-            
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('hud').classList.remove('hidden');
             document.getElementById('minimap-container').classList.remove('hidden');
             document.getElementById('ui-layer').style.display = 'block';
-            
             window.state.gameActive = true;
             for(let i=0; i<15; i++) window.spawnEnemy();
             window.animate();
