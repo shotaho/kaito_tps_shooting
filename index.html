@@ -3,58 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Voxel Tokyo Strike - Ver 0.4.2</title>
+    <title>Voxel Tokyo Strike - Ver 0.4.3</title>
     <style>
         :root { --ui-blue: #0044ff; --ui-red: #ff3300; --ui-green: #22cc22; }
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: sans-serif; touch-action: none; }
         canvas { display: block; }
 
-        /* スタート画面：最前面 */
-        #start-screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #87CEEB; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; color: #111; z-index: 9999;
+        /* HUD - プレイUI */
+        #hud { 
+            position: absolute; top: 15px; left: 15px; color: #000; 
+            pointer-events: none; font-weight: bold; z-index: 50; 
+            background: rgba(255,255,255,0.7); padding: 10px; border-radius: 8px; 
         }
-        .hidden { display: none !important; }
-
-        /* スタートボタン */
-        #start-btn {
-            background: var(--ui-blue); color: white; border: 4px solid white;
-            padding: 20px 50px; font-weight: bold; font-size: 24px; border-radius: 50px;
-            cursor: pointer; transition: 0.2s; opacity: 0.5; /* 初期は半透明 */
+        
+        /* ミニマップ */
+        #minimap-container { 
+            position: absolute; top: 50px; right: 15px; width: 100px; height: 100px; 
+            background: rgba(0, 0, 0, 0.4); border: 2px solid white; border-radius: 50%; 
+            overflow: hidden; z-index: 50; 
         }
-        #start-btn.ready { opacity: 1.0; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        
+        /* バージョン情報（右上に固定） */
+        .version-info { 
+            position: absolute; top: 10px; right: 15px; font-size: 14px; 
+            background: rgba(255,255,255,0.8); padding: 2px 8px; border-radius: 4px; 
+            color: #333; font-weight: bold; z-index: 100;
+        }
 
-        /* プレイUI */
-        #hud { position: absolute; top: 15px; left: 15px; color: #000; pointer-events: none; font-weight: bold; z-index: 50; background: rgba(255,255,255,0.7); padding: 10px; border-radius: 8px; }
-        #minimap-container { position: absolute; top: 15px; right: 15px; width: 110px; height: 110px; background: rgba(0, 0, 0, 0.4); border: 3px solid white; border-radius: 50%; overflow: hidden; z-index: 50; }
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; display: none; }
-        #joystick-bound { position: absolute; bottom: 40px; left: 40px; width: 110px; height: 110px; border: 4px solid white; border-radius: 50%; pointer-events: auto; background: rgba(255,255,255,0.2); }
+        /* 操作UI */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; }
+        #joystick-bound { 
+            position: absolute; bottom: 40px; left: 40px; width: 110px; height: 110px; 
+            border: 4px solid white; border-radius: 50%; pointer-events: auto; background: rgba(255,255,255,0.2); 
+        }
         #joystick-stick { position: absolute; top: 30px; left: 30px; width: 50px; height: 50px; background: white; border-radius: 50%; }
-        .action-btn { position: absolute; pointer-events: auto; border: 4px solid white; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; }
+        
+        .action-btn { 
+            position: absolute; pointer-events: auto; border: 4px solid white; border-radius: 50%; 
+            display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; 
+        }
         #shoot-btn { bottom: 30px; right: 30px; width: 90px; height: 90px; background: var(--ui-red); font-size: 20px; }
         #jump-btn { bottom: 135px; right: 45px; width: 65px; height: 65px; background: var(--ui-green); font-size: 14px; }
-        .version-info { position: absolute; bottom: 20px; right: 20px; font-size: 14px; background: rgba(255,255,255,0.8); padding: 2px 8px; border-radius: 4px; color: #333; }
     </style>
 </head>
 <body>
 
-    <!-- スタート画面 -->
-    <div id="start-screen">
-        <h1 style="color: var(--ui-blue); font-size: 36px; margin: 0;">TOKYO DEFENDER</h1>
-        <p id="loading-text">LOADING ASSETS...</p>
-        <button id="start-btn" disabled>LOADING...</button>
-    </div>
+    <div class="version-info">Ver 0.4.3</div>
 
-    <!-- プレイUI -->
-    <div id="hud" class="hidden">
+    <div id="hud">
         SCORE: <span id="ui-score">0</span><br>
         SHIELD: <span id="ui-hp">100</span>%
     </div>
 
-    <div id="minimap-container" class="hidden">
+    <div id="minimap-container">
         <div id="minimap-enemies" style="position:relative; width:100%; height:100%;"></div>
-        <div id="minimap-player" style="position:absolute; top:50%; left:50%; width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-bottom:12px solid #fff; margin-left:-6px; margin-top:-8px;"></div>
+        <div id="minimap-player" style="position:absolute; top:50%; left:50%; width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-bottom:10px solid #fff; margin-left:-5px; margin-top:-7px;"></div>
     </div>
 
     <div id="ui-layer">
@@ -63,8 +66,6 @@
         <div id="jump-btn" class="action-btn">JUMP</div>
     </div>
 
-    <div class="version-info">Ver 0.4.2</div>
-
     <script type="importmap">
         { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
     </script>
@@ -72,9 +73,9 @@
     <script type="module">
         import * as THREE from 'three';
 
-        // --- 1. ゲーム初期化設定 ---
+        // --- 1. システム設定 ---
         const state = { 
-            gameActive: false, score: 0, hp: 100, 
+            gameActive: true, score: 0, hp: 100, 
             enemies: [], bullets: [], buildings: [],
             camYaw: 0, camPitch: 0, vY: 0, isGrounded: true
         };
@@ -96,7 +97,7 @@
 
         const mat = (color) => new THREE.MeshPhongMaterial({ color });
 
-        // --- 2. キャラクター作成 ---
+        // --- 2. キャラクター作成 (スティーブ風) ---
         const playerGroup = new THREE.Group();
         const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), mat(0xffccaa)); head.position.y = 1.6;
         const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.7, 0.3), mat(0x00aaff)); body.position.y = 1.0;
@@ -107,36 +108,34 @@
         playerGroup.add(head, body, armL, armR, legL, legR);
         scene.add(playerGroup);
 
-        // --- 3. 街の作成 ---
+        // --- 3. 都市の構築 (アスファルト・横断歩道・信号・タワー) ---
         function buildCity() {
-            // ベース地面（芝生）
-            const plane = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), mat(0x44aa44));
-            plane.rotation.x = -Math.PI/2; scene.add(plane);
+            // 地面
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), mat(0x44aa44));
+            ground.rotation.x = -Math.PI/2; scene.add(ground);
 
-            // 道路網
-            for(let i=-3; i<=3; i++) {
-                // アスファルト道路
-                const roadV = new THREE.Mesh(new THREE.PlaneGeometry(14, 500), mat(0x333333));
+            for(let i=-4; i<=4; i++) {
+                // 道路
+                const roadV = new THREE.Mesh(new THREE.PlaneGeometry(14, 800), mat(0x333333));
                 roadV.rotation.x = -Math.PI/2; roadV.position.set(i*50, 0.01, 0); scene.add(roadV);
-                const roadH = new THREE.Mesh(new THREE.PlaneGeometry(500, 14), mat(0x333333));
+                const roadH = new THREE.Mesh(new THREE.PlaneGeometry(800, 14), mat(0x333333));
                 roadH.rotation.x = -Math.PI/2; roadH.position.set(0, 0.01, i*50); scene.add(roadH);
-
+                
                 // 中央線
-                const lineV = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 500), mat(0xffdd00));
+                const lineV = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 800), mat(0xffdd00));
                 lineV.rotation.x = -Math.PI/2; lineV.position.set(i*50, 0.02, 0); scene.add(lineV);
-                const lineH = new THREE.Mesh(new THREE.PlaneGeometry(500, 0.3), mat(0xffdd00));
+                const lineH = new THREE.Mesh(new THREE.PlaneGeometry(800, 0.3), mat(0xffdd00));
                 lineH.rotation.x = -Math.PI/2; lineH.position.set(0, 0.02, i*50); scene.add(lineH);
 
-                // 交差点の横断歩道と信号
-                for(let j=-3; j<=3; j++) {
+                for(let j=-4; j<=4; j++) {
+                    // 横断歩道
                     const zebra = new THREE.Mesh(new THREE.PlaneGeometry(10, 6), mat(0xffffff));
                     zebra.rotation.x = -Math.PI/2; zebra.position.set(i*50, 0.03, j*50 + 10); scene.add(zebra);
-                    
-                    // 信号機
+                    // 信号
                     const signal = new THREE.Group();
-                    const pole = new THREE.Mesh(new THREE.BoxGeometry(0.4, 5, 0.4), mat(0x222222)); pole.position.y = 2.5; signal.add(pole);
-                    const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 0.5), mat(0x111111)); head.position.set(0, 5, 0.2); signal.add(head);
-                    const lamp = new THREE.Mesh(new THREE.CircleGeometry(0.15, 16), new THREE.MeshBasicMaterial({color: 0x00ff00}));
+                    const pole = new THREE.Mesh(new THREE.BoxGeometry(0.3, 5, 0.3), mat(0x222222)); pole.position.y = 2.5; signal.add(pole);
+                    const sHead = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 0.5), mat(0x111111)); sHead.position.set(0, 5, 0.2); signal.add(sHead);
+                    const lamp = new THREE.Mesh(new THREE.CircleGeometry(0.15, 8), new THREE.MeshBasicMaterial({color: 0x00ff00}));
                     lamp.position.set(0, 4.7, 0.46); signal.add(lamp);
                     signal.position.set(i*50 + 8, 0, j*50 + 8); scene.add(signal);
                 }
@@ -153,19 +152,19 @@
             state.buildings.push({x:70, z:-70, w:8, d:8});
 
             // ビル
-            for(let i=0; i<50; i++) {
-                let x = Math.random()*260-130; let z = Math.random()*260-130;
+            for(let i=0; i<60; i++) {
+                let x = Math.random()*300-150; let z = Math.random()*300-150;
                 if(Math.abs(x%50) < 15 || Math.abs(z%50) < 15) { x+=20; z+=20; }
-                if(Math.abs(x)<10 && Math.abs(z)<10) continue;
-                const h = Math.random()*20+10;
+                if(Math.abs(x)<12 && Math.abs(z)<12) continue; // 開始地点を避ける
+                const h = Math.random()*25+10;
                 const b = new THREE.Mesh(new THREE.BoxGeometry(10,h,10), mat(Math.random()>0.5?0xdddddd:0xbbbbbb));
-                b.position.y = h/2; b.position.set(x, h/2, z); scene.add(b);
-                state.buildings.push({x,z,w:10,d:10});
+                b.position.set(x, h/2, z); scene.add(b);
+                state.buildings.push({x, z, w:10, d:10});
             }
         }
         buildCity();
 
-        // --- 4. 操作と衝突判定 ---
+        // --- 4. 衝突判定・操作ロジック ---
         function checkCollision(nx, nz) {
             const r = 0.6;
             for (let b of state.buildings) {
@@ -178,15 +177,13 @@
         let joyTouchId = null, lookTouchId = null, lastLookPos = { x: 0, y: 0 }, isShooting = false;
 
         window.addEventListener('touchstart', e => {
-            if (!state.gameActive) return;
             for(let t of e.changedTouches) {
                 if(t.clientX < window.innerWidth / 2) joyTouchId = t.identifier;
                 else { lookTouchId = t.identifier; lastLookPos = { x: t.clientX, y: t.clientY }; }
             }
-        });
+        }, { passive: false });
 
         window.addEventListener('touchmove', e => {
-            if (!state.gameActive) return;
             for(let t of e.changedTouches) {
                 if(t.identifier === joyTouchId) {
                     const rect = document.getElementById('joystick-bound').getBoundingClientRect();
@@ -199,7 +196,7 @@
                     lastLookPos = { x: t.clientX, y: t.clientY };
                 }
             }
-        });
+        }, { passive: false });
 
         window.addEventListener('touchend', e => {
             for(let t of e.changedTouches) {
@@ -212,18 +209,27 @@
         document.getElementById('shoot-btn').onpointerup = () => isShooting = false;
         document.getElementById('jump-btn').onpointerdown = () => { if (state.isGrounded) { state.vY = 0.25; state.isGrounded = false; } };
 
-        // --- 5. メインループ ---
-        function animate() {
-            if (!state.gameActive) return;
+        // --- 5. 敵スポーン ---
+        function spawnEnemy() {
+            const e = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), mat(0xff0000));
+            e.position.set(Math.random()*200-100, 5, Math.random()*200-100);
+            state.enemies.push({ mesh: e, hp: 2 }); scene.add(e);
+        }
+        for(let i=0; i<15; i++) spawnEnemy();
 
+        // --- 6. アニメーションループ ---
+        function animate() {
+            // 移動
             playerGroup.rotation.y = state.camYaw;
             const dirF = new THREE.Vector3(0, 0, -1).applyQuaternion(playerGroup.quaternion);
             const dirS = new THREE.Vector3(1, 0, 0).applyQuaternion(playerGroup.quaternion);
-            const nx = playerGroup.position.x + (dirF.x * -moveInput.y + dirS.x * moveInput.x) * 0.2;
-            const nz = playerGroup.position.z + (dirF.z * -moveInput.y + dirS.z * moveInput.x) * 0.2;
+            const speed = 0.2;
+            const nx = playerGroup.position.x + (dirF.x * -moveInput.y + dirS.x * moveInput.x) * speed;
+            const nz = playerGroup.position.z + (dirF.z * -moveInput.y + dirS.z * moveInput.x) * speed;
             if (!checkCollision(nx, playerGroup.position.z)) playerGroup.position.x = nx;
             if (!checkCollision(playerGroup.position.x, nz)) playerGroup.position.z = nz;
 
+            // ジャンプ
             playerGroup.position.y += state.vY;
             if (playerGroup.position.y > 0) { state.vY -= 0.012; }
             else { playerGroup.position.y = 0; state.vY = 0; state.isGrounded = true; }
@@ -235,9 +241,11 @@
                 legL.rotation.x = -Math.sin(s) * 0.8; legR.rotation.x = Math.sin(s) * 0.8;
             } else { armL.rotation.x = armR.rotation.x = legL.rotation.x = legR.rotation.x = 0; }
 
+            // カメラ追従
             const camPos = new THREE.Vector3(0, 2.5 + state.camPitch * 4, 7).applyQuaternion(playerGroup.quaternion).add(playerGroup.position);
             camera.position.lerp(camPos, 0.15); camera.lookAt(playerGroup.position.clone().add(new THREE.Vector3(0, 1.5, 0)));
 
+            // 弾丸
             if(isShooting && Date.now() % 10 < 2) {
                 const b = new THREE.Mesh(new THREE.SphereGeometry(0.2), mat(0xffcc00));
                 b.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.3, 0));
@@ -256,19 +264,9 @@
                 });
             }
 
+            // マップ更新
             document.getElementById('minimap-player').style.transform = `rotate(${-state.camYaw * 57.3}deg)`;
             const mapE = document.getElementById('minimap-enemies'); mapE.innerHTML = '';
             state.enemies.forEach(e => {
-                const dx = (e.mesh.position.x - playerGroup.position.x) * 0.5;
-                const dz = (e.mesh.position.z - playerGroup.position.z) * 0.5;
-                const d = document.createElement('div'); d.style.cssText = `position:absolute; width:6px; height:6px; background:red; border-radius:50%; left:calc(50% + ${dx}px); top:calc(50% + ${dz}px);`;
-                mapE.appendChild(d);
-            });
-
-            renderer.render(scene, camera);
-            requestAnimationFrame(animate);
-        }
-
-        // --- 6. 起動ボタンの紐付け ---
-        const startBtn = document.getElementById('start-btn');
-        const loadingText = document.getElementB
+                const dx = (e.mesh.position.x - playerGroup.position.x) * 0.45;
+                const dz = (e.mesh.position.z - playerGroup.position.z) * 0.45;
