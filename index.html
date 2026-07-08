@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Voxel Tokyo Strike</title>
+    <title>Voxel Tokyo Strike - Ver 0.2.1</title>
     <style>
         :root { --neon: #00f2ff; }
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; touch-action: none; }
@@ -40,15 +40,24 @@
             color: white; font-weight: bold; pointer-events: auto;
         }
 
+        /* 画面共通設定 */
         .screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.8); display: flex; flex-direction: column;
             justify-content: center; align-items: center; color: var(--neon); z-index: 100;
         }
         .hidden { display: none; }
+        
+        /* バージョン表記のスタイル */
+        .version-info {
+            position: absolute; bottom: 10px; right: 15px;
+            font-size: 14px; opacity: 0.7; letter-spacing: 1px;
+        }
+
         button {
             background: var(--neon); color: black; border: none;
             padding: 15px 40px; font-weight: bold; cursor: pointer;
+            box-shadow: 0 0 15px var(--neon);
         }
     </style>
 </head>
@@ -64,9 +73,13 @@
         <div id="shoot-btn">FIRE</div>
     </div>
 
+    <!-- ホーム（スタート）画面 -->
     <div id="start-screen" class="screen">
-        <h1>VOXEL TOKYO</h1>
+        <h1 style="letter-spacing: 10px;">VOXEL TOKYO</h1>
+        <p style="margin-bottom: 20px; opacity: 0.8;">DISTRICT 01: NEON STREET</p>
         <button onclick="initGame()">START MISSION</button>
+        <!-- バージョン表示 -->
+        <div class="version-info">Ver <span id="ver-display"></span></div>
     </div>
 
     <script type="importmap">
@@ -76,7 +89,10 @@
     <script type="module">
         import * as THREE from 'three';
 
-        // --- 設定 ---
+        // --- ゲーム定数とバージョン管理 ---
+        const GAME_VERSION = "0.2.1";
+        document.getElementById('ver-display').innerText = GAME_VERSION;
+
         let state = { 
             gameActive: false, score: 0, hp: 100, 
             enemies: [], bullets: [],
@@ -90,171 +106,13 @@
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
-        // --- キャラクター（スティーブ風ボクセル） ---
+        // --- キャラクター（スティーブ風） ---
         const playerGroup = new THREE.Group();
         const mat = (color) => new THREE.MeshPhongMaterial({ color });
         
         const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), mat(0xffccaa));
         head.position.y = 1.6;
-        const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.7, 0.3), mat(0x00aaff));
-        body.position.y = 1.0;
-        const armL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.7, 0.2), mat(0xffccaa));
-        armL.position.set(0.45, 1.0, 0);
-        const armR = armL.clone(); armR.position.x = -0.45;
-        const legL = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.7, 0.25), mat(0x333333));
-        legL.position.set(0.15, 0.3, 0);
-        const legR = legL.clone(); legR.position.x = -0.15;
-
-        playerGroup.add(head, body, armL, armR, legL, legR);
-        scene.add(playerGroup);
-
-        // --- 街並みの作成（道路と並木風ビル） ---
-        function createCity() {
-            const cityGroup = new THREE.Group();
-            // 地面（グリッド道路）
-            const grid = new THREE.GridHelper(400, 40, 0x00f2ff, 0x111111);
-            cityGroup.add(grid);
-
-            for(let z = -200; z < 200; z += 20) {
-                for(let x = -200; x < 200; x += 20) {
-                    if(Math.abs(x) < 10) continue; // 道路部分は開ける
-                    const h = Math.random() * 20 + 5;
-                    const bGeo = new THREE.BoxGeometry(8, h, 8);
-                    const bMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
-                    const b = new THREE.Mesh(bGeo, bMat);
-                    b.position.set(x, h/2, z);
-                    cityGroup.add(b);
-
-                    // ビルのネオンライン
-                    const edgeGeo = new THREE.BoxGeometry(8.1, 0.5, 8.1);
-                    const edgeMat = new THREE.MeshBasicMaterial({ color: 0x00f2ff });
-                    const edge = new THREE.Mesh(edgeGeo, edgeMat);
-                    edge.position.set(x, h, z);
-                    cityGroup.add(edge);
-                }
-            }
-            scene.add(cityGroup);
-        }
-        createCity();
-
-        // --- ライティング ---
-        scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-        const pLight = new THREE.PointLight(0x00f2ff, 2, 50);
-        playerGroup.add(pLight); // 自機を光らせる
-
-        // --- 操作ロジック (改善版) ---
-        let moveInput = { x: 0, y: 0 };
-        let joyTouchId = null;
-        let lookTouchId = null;
-        let lastLookPos = { x: 0, y: 0 };
-
-        window.addEventListener('touchstart', e => {
-            for(let t of e.changedTouches) {
-                if(t.clientX < window.innerWidth / 2) {
-                    joyTouchId = t.identifier;
-                } else {
-                    lookTouchId = t.identifier;
-                    lastLookPos = { x: t.clientX, y: t.clientY };
-                }
-            }
-        }, { passive: false });
-
-        window.addEventListener('touchmove', e => {
-            for(let t of e.changedTouches) {
-                if(t.identifier === joyTouchId) {
-                    const rect = document.getElementById('joystick-bound').getBoundingClientRect();
-                    const dx = t.clientX - (rect.left + 60);
-                    const dy = t.clientY - (rect.top + 60);
-                    const dist = Math.min(Math.sqrt(dx*dx + dy*dy), 50);
-                    moveInput.x = dx / 50;
-                    moveInput.y = dy / 50;
-                    document.getElementById('joystick-stick').style.transform = `translate(${moveInput.x * 40}px, ${moveInput.y * 40}px)`;
-                } else if(t.identifier === lookTouchId) {
-                    const dx = t.clientX - lastLookPos.x;
-                    const dy = t.clientY - lastLookPos.y;
-                    state.camYaw -= dx * 0.005;
-                    state.camPitch -= dy * 0.005;
-                    state.camPitch = Math.max(-0.5, Math.min(0.5, state.camPitch));
-                    lastLookPos = { x: t.clientX, y: t.clientY };
-                }
-            }
-        }, { passive: false });
-
-        window.addEventListener('touchend', e => {
-            for(let t of e.changedTouches) {
-                if(t.identifier === joyTouchId) {
-                    joyTouchId = null;
-                    moveInput = { x: 0, y: 0 };
-                    document.getElementById('joystick-stick').style.transform = `translate(0,0)`;
-                } else if(t.identifier === lookTouchId) {
-                    lookTouchId = null;
-                }
-            }
-        });
-
-        let isShooting = false;
-        document.getElementById('shoot-btn').addEventListener('touchstart', () => isShooting = true);
-        document.getElementById('shoot-btn').addEventListener('touchend', () => isShooting = false);
-
-        // --- 更新ループ ---
-        function update() {
-            if (!state.gameActive) return;
-
-            // 回転と移動の適用
-            playerGroup.rotation.y = state.camYaw;
-            const dirForward = new THREE.Vector3(0, 0, -1).applyQuaternion(playerGroup.quaternion);
-            const dirSide = new THREE.Vector3(1, 0, 0).applyQuaternion(playerGroup.quaternion);
-            playerGroup.position.add(dirForward.multiplyScalar(-moveInput.y * 0.3));
-            playerGroup.position.add(dirSide.multiplyScalar(moveInput.x * 0.3));
-
-            // キャラクターの歩行アニメーション（簡易）
-            if(moveInput.x !== 0 || moveInput.y !== 0) {
-                const speed = Date.now() * 0.01;
-                legL.rotation.x = Math.sin(speed) * 0.5;
-                legR.rotation.x = -Math.sin(speed) * 0.5;
-                armL.rotation.x = -Math.sin(speed) * 0.5;
-                armR.rotation.x = Math.sin(speed) * 0.5;
-            }
-
-            // カメラ追従
-            const camOffset = new THREE.Vector3(0, 2 + state.camPitch * 5, 6).applyQuaternion(playerGroup.quaternion);
-            camera.position.lerp(playerGroup.position.clone().add(camOffset), 0.1);
-            camera.lookAt(playerGroup.position.clone().add(new THREE.Vector3(0, 1.5, 0)));
-
-            // 射撃
-            if(isShooting && Date.now() % 10 < 2) {
-                const b = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), new THREE.MeshBasicMaterial({color: 0xffff00}));
-                b.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.2, 0));
-                const target = new THREE.Vector3(0, state.camPitch, -1).applyQuaternion(playerGroup.quaternion).normalize();
-                state.bullets.push({mesh: b, dir: target, life: 50});
-                scene.add(b);
-            }
-
-            // 弾の更新
-            for(let i=state.bullets.length-1; i>=0; i--) {
-                const b = state.bullets[i];
-                b.mesh.position.add(b.dir.clone().multiplyScalar(1.5));
-                if(--b.life < 0) { scene.remove(b.mesh); state.bullets.splice(i, 1); }
-            }
-
-            renderer.render(scene, camera);
-            requestAnimationFrame(update);
-        }
-
-        window.initGame = () => {
-            document.getElementById('start-screen').classList.add('hidden');
-            state.gameActive = true;
-            update();
-        };
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-    </script>
-</body>
-</html>
+        const bod
