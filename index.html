@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Multi-Stage Shooter</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; touch-action: none; }
+        canvas { display: block; }
+        #hud {
+            position: absolute; top: 20px; left: 20px; color: #0ff; pointer-events: none;
+            font-family: monospace; font-size: 20px; line-height: 1.5; z-index: 10;
+        }
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: space-between; align-items: flex-end;
+            padding: 40px; box-sizing: border-box; pointer-events: none; z-index: 20;
+        }
+        #joystick-area {
+            width: 120px; height: 120px; background: rgba(0, 255, 255, 0.1);
+            border: 2px solid rgba(0, 255, 255, 0.3); border-radius: 50%; 
+            position: relative; pointer-events: auto;
+        }
+        #joystick-stick {
+            width: 50px; height: 50px; background: rgba(0, 255, 255, 0.5);
+            border-radius: 50%; position: absolute; top: 35px; left: 35px;
+        }
+        #shoot-btn {
+            width: 100px; height: 100px; background: rgba(255, 0, 85, 0.6);
+            border: 3px solid #fff; border-radius: 50%; display: flex; 
+            justify-content: center; align-items: center; color: white; 
+            font-weight: bold; pointer-events: auto; user-select: none;
+        }
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; color: #0ff; z-index: 100;
+        }
+        .hidden { display: none; }
+        button {
+            background: transparent; border: 2px solid #0ff; color: #0ff;
+            padding: 15px 40px; font-size: 24px; cursor: pointer; transition: 0.3s;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="hud">
+        STAGE: <span id="ui-stage-num">1</span> - <span id="ui-stage-name">TOKYO</span><br>
+        SCORE: <span id="ui-score">0</span><br>
+        HP: <progress id="hp-bar" value="100" max="100" style="width:150px;"></progress>
+    </div>
+
+    <div id="ui-layer">
+        <div id="joystick-area"><div id="joystick-stick"></div></div>
+        <div id="shoot-btn">FIRE</div>
+    </div>
+
+    <div id="start-screen" class="screen">
+        <h1 id="start-title">3D SHOOTER MISSION</h1>
+        <p id="start-desc">STAGE 1: TOKYO NEON CITY</p>
+        <button onclick="initGame()">LAUNCH MISSION</button>
+    </div>
+
+    <div id="result-screen" class="screen hidden">
+        <h1 id="result-title">MISSION CLEAR</h1>
+        <p>SCORE: <span id="final-score">0</span></p>
+        <button id="next-btn" onclick="nextStage()">NEXT STAGE</button>
+    </div>
+
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- ステージ設定データ ---
+        const STAGE_DATA = [
+            { 
+                name: "TOKYO", 
+                color: 0x000510, 
+                fog: 0x000510, 
+                enemies: 5, 
+                gravity: true,
+                description: "Destroy neon drones in Tokyo city."
+            },
+            { 
+                name: "SPACE", 
+                color: 0x000000, 
+                fog: 0x000022, 
+                enemies: 8, 
+                gravity: false,
+                description: "Zero-gravity combat in deep space."
+            }
+        ];
+
+        // --- グローバル変数 ---
+        let currentStageIdx = 0;
+        let state = { gameActive: false, score: 0, hp: 100, enemies: [], bullets: [] };
+        
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const playerGroup = new THREE.Group();
+        const ship = new THREE.Mesh(
+            new THREE.ConeGeometry(0.5, 2, 4),
+            new THREE.MeshPhongMaterial({ color: 0x00ffff })
+        );
+        ship.rotateX(Math.PI/2);
+        playerGroup.add(ship);
+        scene.add(playerGroup);
+
+        const light = new THREE.DirectionalLight(0xffffff, 2);
+        light.position.set(10, 20, 10);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040, 2));
+
+        // --- 操作ロジック ---
+        let moveInput = { x: 0, y: 0 };
+        let rotationY = 0;
+        let isShooting = false;
+        let lastShootTime = 0;
+
+        // ジョイスティック・射撃ボタン
+        document.getElementById('shoot-btn').onpointerdown = () => isShooting = true;
+        document.getElementById('shoot-btn').onpointerup = () => isShooting = false;
+
+        const joyStickArea = document.getElementById('joystick-area');
+        const joyStickStick = document.getElementById('joystick-stick');
+        
+        window.addEventListener('touchmove', e => {
+            const t = e.targetTouches[0];
+            const rect = joyStickArea.getBoundingClientRect();
+            if (t.clientX < window.innerWidth / 2) {
+                const dx = t.clientX - (rect.left + 60);
+                const dy = t.clientY - (rect.top + 60);
+                const dist = Math.min(Math.sqrt(dx*dx + dy*dy), 50);
+                moveInput.x = dx / 50;
+                moveInput.y = dy / 50;
+                joyStickStick.style.transform = `translate(${moveInput.x * 40}px, ${moveInput.y * 40}px)`;
+            } else {
+                rotationY -= 0.05 * (e.movementX || 0); // 簡易旋回
+            }
+        });
+
+        window.addEventListener('touchend', () => {
+            moveInput = { x: 0, y: 0 };
+            joyStickStick.style.transform = `translate(0,0)`;
+        });
+
+        // --- ステージ構築 ---
+        function buildStage(idx) {
+            const data = STAGE_DATA[idx];
+            scene.background = new THREE.Color(data.color);
+            scene.fog = new THREE.FogExp2(data.fog, 0.015);
+            
+            // 古いオブジェクトの削除
+            state.enemies.forEach(e => scene.remove(e.mesh));
+            state.enemies = [];
+
+            // ステージごとのデコレーション
+            if (data.name === "TOKYO") {
+                const grid = new THREE.GridHelper(500, 50, 0xff00ff, 0x222222);
+                scene.add(grid);
+            } else if (data.name === "SPACE") {
+                const starGeo = new THREE.SphereGeometry(0.1, 8, 8);
+                for(let i=0; i<200; i++) {
+                    const star = new THREE.Mesh(starGeo, new THREE.MeshBasicMaterial({color: 0xffffff}));
+                    star.position.set(Math.random()*200-100, Math.random()*200-100, Math.random()*200-100);
+                    scene.add(star);
+                }
+            }
+
+            // 敵の配置
+            for(let i=0; i<data.enemies; i++) {
+                const e = new THREE.Mesh(new THREE.OctahedronGeometry(1.5), new THREE.MeshPhongMaterial({color: 0xff0000}));
+                e.position.set(Math.random()*60-30, 2, -30 - i*10);
+                state.enemies.push({ mesh: e, hp: 2 });
+                scene.add(e);
+            }
+
+            document.getElementById('ui-stage-num').innerText = idx + 1;
+            document.getElementById('ui-stage-name').innerText = data.name;
+        }
+
+        // --- メインループ ---
+        function update() {
+            if (!state.gameActive) return;
+
+            playerGroup.rotation.y = rotationY;
+            playerGroup.translateZ(moveInput.y * 0.4);
+            playerGroup.translateX(moveInput.x * 0.4);
+
+            const camPos = new THREE.Vector3(0, 3, 8).applyQuaternion(playerGroup.quaternion).add(playerGroup.position);
+            camera.position.lerp(camPos, 0.1);
+            camera.lookAt(playerGroup.position);
+
+            if (isShooting && Date.now() - lastShootTime > 150) {
+                const b = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshBasicMaterial({color:0xffff00}));
+                b.position.copy(playerGroup.position);
+                const dir = new THREE.Vector3(0,0,-1).applyQuaternion(playerGroup.quaternion);
+                state.bullets.push({mesh: b, dir: dir, life: 100});
+                scene.add(b);
+                lastShootTime = Date.now();
+            }
+
+            for(let i=state.bullets.length-1; i>=0; i--) {
+                const b = state.bullets[i];
+                b.mesh.position.add(b.dir.clone().multiplyScalar(1.2));
+                if (--b.life < 0) { scene.remove(b.mesh); state.bullets.splice(i,1); continue; }
+                
+                state.enemies.forEach((e, ei) => {
+                    if (b.mesh.position.distanceTo(e.mesh.position) < 2) {
+                        e.hp--;
+                        if (e.hp <= 0) {
+                            scene.remove(e.mesh);
+                            state.enemies.splice(ei, 1);
+                            state.score += 100;
+                            document.getElementById('ui-score').innerText = state.score;
+                        }
+                    }
+                });
+            }
+
+            if (state.enemies.length === 0) endGame();
+
+            renderer.render(scene, camera);
+            requestAnimationFrame(update);
+        }
+
+        window.initGame = () => {
+            document.getElementById('start-screen').classList.add('hidden');
+            buildStage(currentStageIdx);
+            state.gameActive = true;
+            update();
+        };
+
+        function endGame() {
+            state.gameActive = false;
+            document.getElementById('result-screen').classList.remove('hidden');
+            document.getElementById('final-score').innerText = state.score;
+        }
+
+        window.nextStage = () => {
+            currentStageIdx++;
+            if (currentStageIdx >= STAGE_DATA.length) {
+                alert("ALL MISSIONS CLEAR!");
+                location.reload();
+            } else {
+                document.getElementById('result-screen').classList.add('hidden');
+                buildStage(currentStageIdx);
+                state.gameActive = true;
+                update();
+            }
+        };
+
+    </script>
+</body>
+</html>
