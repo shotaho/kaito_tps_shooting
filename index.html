@@ -3,94 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Tokyo Strike</title>
+    <title>Voxel Tokyo Strike</title>
     <style>
-        :root { --neon-color: #00f2ff; --accent-color: #ff0055; }
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Orbitron', sans-serif; touch-action: none; }
+        :root { --neon: #00f2ff; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; touch-action: none; }
         canvas { display: block; }
         
-        /* SF風HUDデザイン */
+        /* HUD */
         #hud {
-            position: absolute; top: 20px; left: 20px; color: var(--neon-color);
-            pointer-events: none; text-shadow: 0 0 10px var(--neon-color);
-            letter-spacing: 2px; z-index: 10;
+            position: absolute; top: 10px; left: 10px; color: var(--neon);
+            pointer-events: none; text-shadow: 2px 2px #000; z-index: 10;
         }
-        .hud-label { font-size: 12px; opacity: 0.7; }
-        .hud-value { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-
-        #hp-container {
-            width: 200px; height: 10px; background: rgba(0,242,255,0.2);
-            border: 1px solid var(--neon-color); margin-top: 5px;
-        }
-        #hp-bar { width: 100%; height: 100%; background: var(--neon-color); transition: 0.3s; }
+        .bar-bg { width: 150px; height: 8px; background: rgba(0,0,0,0.5); border: 1px solid var(--neon); }
+        #hp-bar { width: 100%; height: 100%; background: var(--neon); }
 
         /* 操作UI */
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; justify-content: space-between; align-items: flex-end;
-            padding: 40px; box-sizing: border-box; pointer-events: none; z-index: 20;
+            pointer-events: none; z-index: 20;
         }
-        #joystick-area {
-            width: 120px; height: 120px; border: 2px solid var(--neon-color);
-            border-radius: 50%; position: relative; pointer-events: auto;
-            background: rgba(0, 242, 255, 0.05); box-shadow: 0 0 15px rgba(0, 242, 255, 0.2);
+        #joystick-bound {
+            position: absolute; bottom: 40px; left: 40px;
+            width: 120px; height: 120px; border: 2px solid var(--neon);
+            border-radius: 50%; pointer-events: auto;
         }
         #joystick-stick {
-            width: 50px; height: 50px; background: var(--neon-color);
-            border-radius: 50%; position: absolute; top: 35px; left: 35px;
-            box-shadow: 0 0 20px var(--neon-color);
+            position: absolute; top: 35px; left: 35px;
+            width: 50px; height: 50px; background: var(--neon);
+            border-radius: 50%; opacity: 0.6;
         }
         #shoot-btn {
-            width: 90px; height: 90px; border: 3px solid var(--accent-color);
-            border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            position: absolute; bottom: 40px; right: 40px;
+            width: 100px; height: 100px; background: rgba(255,0,80,0.4);
+            border: 3px solid #ff0050; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
             color: white; font-weight: bold; pointer-events: auto;
-            background: rgba(255, 0, 85, 0.2); box-shadow: 0 0 20px var(--accent-color);
-            text-shadow: 0 0 10px white;
         }
 
         .screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, #001122 0%, #000000 100%);
-            display: flex; flex-direction: column; justify-content: center;
-            align-items: center; color: var(--neon-color); z-index: 100;
+            background: rgba(0,0,0,0.8); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; color: var(--neon); z-index: 100;
         }
         .hidden { display: none; }
         button {
-            background: transparent; border: 2px solid var(--neon-color); color: var(--neon-color);
-            padding: 15px 50px; font-size: 20px; cursor: pointer;
-            box-shadow: 0 0 15px var(--neon-color); transition: 0.3s;
+            background: var(--neon); color: black; border: none;
+            padding: 15px 40px; font-weight: bold; cursor: pointer;
         }
-        button:hover { background: var(--neon-color); color: black; }
     </style>
-    <!-- フォント読み込み -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
     <div id="hud">
-        <div class="hud-label">MISSION PHASE</div>
-        <div class="hud-value"><span id="ui-stage-num">1</span>: <span id="ui-stage-name">TOKYO</span></div>
-        <div class="hud-label">TACTICAL SCORE</div>
-        <div class="hud-value" id="ui-score">000000</div>
-        <div class="hud-label">SHIELD INTEGRITY</div>
-        <div id="hp-container"><div id="hp-bar"></div></div>
+        SCORE: <span id="ui-score">0</span><br>
+        SHIELD:<div class="bar-bg"><div id="hp-bar"></div></div>
     </div>
 
     <div id="ui-layer">
-        <div id="joystick-area"><div id="joystick-stick"></div></div>
+        <div id="joystick-bound"><div id="joystick-stick"></div></div>
         <div id="shoot-btn">FIRE</div>
     </div>
 
     <div id="start-screen" class="screen">
-        <h1 style="letter-spacing: 15px; font-size: 4vw;">NEON STRIKE</h1>
-        <p style="margin-bottom: 30px; opacity: 0.8;">DISTRICT 01: TOKYO CORE</p>
-        <button onclick="initGame()">ENGAGE</button>
-    </div>
-
-    <div id="result-screen" class="screen hidden">
-        <h1 id="result-title">MISSION COMPLETE</h1>
-        <p>TOTAL SCORE: <span id="final-score">0</span></p>
-        <button id="next-btn" onclick="nextStage()">NEXT SECTOR</button>
+        <h1>VOXEL TOKYO</h1>
+        <button onclick="initGame()">START MISSION</button>
     </div>
 
     <script type="importmap">
@@ -100,202 +76,177 @@
     <script type="module">
         import * as THREE from 'three';
 
-        // --- ステージ設定 ---
-        const STAGE_DATA = [
-            { name: "TOKYO", color: 0x00020a, enemies: 8 },
-            { name: "SPACE", color: 0x000000, enemies: 12 }
-        ];
-
-        let currentStageIdx = 0;
-        let state = { gameActive: false, score: 0, hp: 100, enemies: [], bullets: [], particles: [] };
+        // --- 設定 ---
+        let state = { 
+            gameActive: false, score: 0, hp: 100, 
+            enemies: [], bullets: [],
+            camYaw: 0, camPitch: 0 
+        };
         
         const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020205);
+        scene.fog = new THREE.FogExp2(0x020205, 0.01);
+
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
-        // --- プレイヤー機体 (デザイン強化) ---
+        // --- キャラクター（スティーブ風ボクセル） ---
         const playerGroup = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.3, 2), new THREE.MeshPhongMaterial({color: 0x00ffff}));
-        const wing = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.1, 0.8), new THREE.MeshPhongMaterial({color: 0x00ffff}));
-        const cockpit = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshPhongMaterial({color: 0xffffff, transparent: true, opacity: 0.7}));
-        cockpit.position.y = 0.2; cockpit.position.z = -0.2;
-        playerGroup.add(body, wing, cockpit);
+        const mat = (color) => new THREE.MeshPhongMaterial({ color });
+        
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), mat(0xffccaa));
+        head.position.y = 1.6;
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.7, 0.3), mat(0x00aaff));
+        body.position.y = 1.0;
+        const armL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.7, 0.2), mat(0xffccaa));
+        armL.position.set(0.45, 1.0, 0);
+        const armR = armL.clone(); armR.position.x = -0.45;
+        const legL = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.7, 0.25), mat(0x333333));
+        legL.position.set(0.15, 0.3, 0);
+        const legR = legL.clone(); legR.position.x = -0.15;
+
+        playerGroup.add(head, body, armL, armR, legL, legR);
         scene.add(playerGroup);
 
-        // --- パーティクルシステム ---
-        function createExplosion(pos) {
-            for(let i=0; i<15; i++) {
-                const p = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.2), 
-                    new THREE.MeshBasicMaterial({color: 0xffaa00})
-                );
-                p.position.copy(pos);
-                const vel = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5).multiplyScalar(0.5);
-                state.particles.push({mesh: p, vel: vel, life: 1.0});
-                scene.add(p);
-            }
-        }
+        // --- 街並みの作成（道路と並木風ビル） ---
+        function createCity() {
+            const cityGroup = new THREE.Group();
+            // 地面（グリッド道路）
+            const grid = new THREE.GridHelper(400, 40, 0x00f2ff, 0x111111);
+            cityGroup.add(grid);
 
-        // --- ネオン都市のビル生成 ---
-        function createBuildings() {
-            const group = new THREE.Group();
-            for(let i=0; i<60; i++) {
-                const h = Math.random() * 30 + 10;
-                const bGeo = new THREE.BoxGeometry(5, h, 5);
-                const bMat = new THREE.MeshPhongMaterial({
-                    color: 0x050505,
-                    emissive: 0x001122
-                });
-                const b = new THREE.Mesh(bGeo, bMat);
-                b.position.set(Math.random()*200-100, h/2, Math.random()*200-100);
-                
-                // 窓の明かりエフェクト（簡易版）
-                if(Math.random() > 0.5) {
-                    const win = new THREE.PointLight(0x00f2ff, 1, 15);
-                    win.position.set(b.position.x, h, b.position.z);
-                    group.add(win);
+            for(let z = -200; z < 200; z += 20) {
+                for(let x = -200; x < 200; x += 20) {
+                    if(Math.abs(x) < 10) continue; // 道路部分は開ける
+                    const h = Math.random() * 20 + 5;
+                    const bGeo = new THREE.BoxGeometry(8, h, 8);
+                    const bMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+                    const b = new THREE.Mesh(bGeo, bMat);
+                    b.position.set(x, h/2, z);
+                    cityGroup.add(b);
+
+                    // ビルのネオンライン
+                    const edgeGeo = new THREE.BoxGeometry(8.1, 0.5, 8.1);
+                    const edgeMat = new THREE.MeshBasicMaterial({ color: 0x00f2ff });
+                    const edge = new THREE.Mesh(edgeGeo, edgeMat);
+                    edge.position.set(x, h, z);
+                    cityGroup.add(edge);
                 }
-                group.add(b);
             }
-            return group;
+            scene.add(cityGroup);
         }
+        createCity();
 
-        let stageDecoration = new THREE.Group();
-        scene.add(stageDecoration);
+        // --- ライティング ---
+        scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+        const pLight = new THREE.PointLight(0x00f2ff, 2, 50);
+        playerGroup.add(pLight); // 自機を光らせる
 
-        // --- 操作系 ---
+        // --- 操作ロジック (改善版) ---
         let moveInput = { x: 0, y: 0 };
-        let rotationY = 0;
-        let isShooting = false;
-        let lastShootTime = 0;
+        let joyTouchId = null;
+        let lookTouchId = null;
+        let lastLookPos = { x: 0, y: 0 };
 
-        document.getElementById('shoot-btn').onpointerdown = () => isShooting = true;
-        document.getElementById('shoot-btn').onpointerup = () => isShooting = false;
+        window.addEventListener('touchstart', e => {
+            for(let t of e.changedTouches) {
+                if(t.clientX < window.innerWidth / 2) {
+                    joyTouchId = t.identifier;
+                } else {
+                    lookTouchId = t.identifier;
+                    lastLookPos = { x: t.clientX, y: t.clientY };
+                }
+            }
+        }, { passive: false });
 
         window.addEventListener('touchmove', e => {
-            const t = e.targetTouches[0];
-            const rect = document.getElementById('joystick-area').getBoundingClientRect();
-            if (t.clientX < window.innerWidth / 2) {
-                moveInput.x = (t.clientX - (rect.left + 60)) / 60;
-                moveInput.y = (t.clientY - (rect.top + 60)) / 60;
-                document.getElementById('joystick-stick').style.transform = `translate(${moveInput.x * 40}px, ${moveInput.y * 40}px)`;
-            } else {
-                rotationY -= 0.04 * (e.movementX || 0);
+            for(let t of e.changedTouches) {
+                if(t.identifier === joyTouchId) {
+                    const rect = document.getElementById('joystick-bound').getBoundingClientRect();
+                    const dx = t.clientX - (rect.left + 60);
+                    const dy = t.clientY - (rect.top + 60);
+                    const dist = Math.min(Math.sqrt(dx*dx + dy*dy), 50);
+                    moveInput.x = dx / 50;
+                    moveInput.y = dy / 50;
+                    document.getElementById('joystick-stick').style.transform = `translate(${moveInput.x * 40}px, ${moveInput.y * 40}px)`;
+                } else if(t.identifier === lookTouchId) {
+                    const dx = t.clientX - lastLookPos.x;
+                    const dy = t.clientY - lastLookPos.y;
+                    state.camYaw -= dx * 0.005;
+                    state.camPitch -= dy * 0.005;
+                    state.camPitch = Math.max(-0.5, Math.min(0.5, state.camPitch));
+                    lastLookPos = { x: t.clientX, y: t.clientY };
+                }
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchend', e => {
+            for(let t of e.changedTouches) {
+                if(t.identifier === joyTouchId) {
+                    joyTouchId = null;
+                    moveInput = { x: 0, y: 0 };
+                    document.getElementById('joystick-stick').style.transform = `translate(0,0)`;
+                } else if(t.identifier === lookTouchId) {
+                    lookTouchId = null;
+                }
             }
         });
 
-        window.addEventListener('touchend', () => {
-            moveInput = { x: 0, y: 0 };
-            document.getElementById('joystick-stick').style.transform = `translate(0,0)`;
-        });
+        let isShooting = false;
+        document.getElementById('shoot-btn').addEventListener('touchstart', () => isShooting = true);
+        document.getElementById('shoot-btn').addEventListener('touchend', () => isShooting = false);
 
-        // --- ステージ構築 ---
-        function buildStage(idx) {
-            const data = STAGE_DATA[idx];
-            scene.background = new THREE.Color(data.color);
-            scene.fog = new THREE.FogExp2(data.color, 0.01);
-            
-            while(stageDecoration.children.length > 0) stageDecoration.remove(stageDecoration.children[0]);
-            if(data.name === "TOKYO") stageDecoration.add(createBuildings());
-
-            state.enemies.forEach(e => scene.remove(e.mesh));
-            state.enemies = [];
-            for(let i=0; i<data.enemies; i++) {
-                const e = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5), new THREE.MeshPhongMaterial({color: 0xff0055, emissive: 0x440011}));
-                e.position.set(Math.random()*100-50, 5, -50 - i*20);
-                state.enemies.push({ mesh: e, hp: 2 });
-                scene.add(e);
-            }
-            document.getElementById('ui-stage-num').innerText = idx + 1;
-            document.getElementById('ui-stage-name').innerText = data.name;
-        }
-
-        // --- ループ ---
+        // --- 更新ループ ---
         function update() {
             if (!state.gameActive) return;
 
-            playerGroup.rotation.y = rotationY;
-            playerGroup.rotation.z = -moveInput.x * 0.5; // 傾き演出
-            playerGroup.translateZ(moveInput.y * 0.6);
-            playerGroup.translateX(moveInput.x * 0.6);
+            // 回転と移動の適用
+            playerGroup.rotation.y = state.camYaw;
+            const dirForward = new THREE.Vector3(0, 0, -1).applyQuaternion(playerGroup.quaternion);
+            const dirSide = new THREE.Vector3(1, 0, 0).applyQuaternion(playerGroup.quaternion);
+            playerGroup.position.add(dirForward.multiplyScalar(-moveInput.y * 0.3));
+            playerGroup.position.add(dirSide.multiplyScalar(moveInput.x * 0.3));
 
-            const camPos = new THREE.Vector3(0, 4, 10).applyQuaternion(playerGroup.quaternion).add(playerGroup.position);
-            camera.position.lerp(camPos, 0.1);
-            camera.lookAt(playerGroup.position.clone().add(new THREE.Vector3(0, 1, 0)));
-
-            if (isShooting && Date.now() - lastShootTime > 120) {
-                const b = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 1), new THREE.MeshBasicMaterial({color:0x00f2ff}));
-                b.position.copy(playerGroup.position);
-                b.quaternion.copy(playerGroup.quaternion);
-                state.bullets.push({mesh: b, dir: new THREE.Vector3(0,0,-2).applyQuaternion(playerGroup.quaternion), life: 60});
-                scene.add(b);
-                lastShootTime = Date.now();
+            // キャラクターの歩行アニメーション（簡易）
+            if(moveInput.x !== 0 || moveInput.y !== 0) {
+                const speed = Date.now() * 0.01;
+                legL.rotation.x = Math.sin(speed) * 0.5;
+                legR.rotation.x = -Math.sin(speed) * 0.5;
+                armL.rotation.x = -Math.sin(speed) * 0.5;
+                armR.rotation.x = Math.sin(speed) * 0.5;
             }
 
-            // 弾丸と当たり判定
+            // カメラ追従
+            const camOffset = new THREE.Vector3(0, 2 + state.camPitch * 5, 6).applyQuaternion(playerGroup.quaternion);
+            camera.position.lerp(playerGroup.position.clone().add(camOffset), 0.1);
+            camera.lookAt(playerGroup.position.clone().add(new THREE.Vector3(0, 1.5, 0)));
+
+            // 射撃
+            if(isShooting && Date.now() % 10 < 2) {
+                const b = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), new THREE.MeshBasicMaterial({color: 0xffff00}));
+                b.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.2, 0));
+                const target = new THREE.Vector3(0, state.camPitch, -1).applyQuaternion(playerGroup.quaternion).normalize();
+                state.bullets.push({mesh: b, dir: target, life: 50});
+                scene.add(b);
+            }
+
+            // 弾の更新
             for(let i=state.bullets.length-1; i>=0; i--) {
                 const b = state.bullets[i];
-                b.mesh.position.add(b.dir);
-                if (--b.life < 0) { scene.remove(b.mesh); state.bullets.splice(i,1); continue; }
-                
-                state.enemies.forEach((e, ei) => {
-                    if (b.mesh.position.distanceTo(e.mesh.position) < 2.5) {
-                        createExplosion(e.mesh.position);
-                        e.hp--;
-                        scene.remove(b.mesh);
-                        state.bullets.splice(i, 1);
-                        if (e.hp <= 0) {
-                            scene.remove(e.mesh);
-                            state.enemies.splice(ei, 1);
-                            state.score += 150;
-                            document.getElementById('ui-score').innerText = state.score.toString().padStart(6, '0');
-                        }
-                    }
-                });
+                b.mesh.position.add(b.dir.clone().multiplyScalar(1.5));
+                if(--b.life < 0) { scene.remove(b.mesh); state.bullets.splice(i, 1); }
             }
-
-            // パーティクル更新
-            for(let i=state.particles.length-1; i>=0; i--) {
-                const p = state.particles[i];
-                p.mesh.position.add(p.vel);
-                p.life -= 0.02;
-                p.mesh.scale.setScalar(p.life);
-                if(p.life <= 0) { scene.remove(p.mesh); state.particles.splice(i,1); }
-            }
-
-            if (state.enemies.length === 0) endGame();
 
             renderer.render(scene, camera);
             requestAnimationFrame(update);
         }
 
-        const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-        scene.add(ambient);
-        const sun = new THREE.DirectionalLight(0xffffff, 1);
-        sun.position.set(5, 10, 7);
-        scene.add(sun);
-
         window.initGame = () => {
             document.getElementById('start-screen').classList.add('hidden');
-            buildStage(currentStageIdx);
             state.gameActive = true;
             update();
-        };
-
-        function endGame() {
-            state.gameActive = false;
-            document.getElementById('result-screen').classList.remove('hidden');
-            document.getElementById('final-score').innerText = state.score;
-        }
-
-        window.nextStage = () => {
-            currentStageIdx++;
-            document.getElementById('result-screen').classList.add('hidden');
-            buildStage(currentStageIdx);
-            state.gameActive = true;
         };
 
         window.addEventListener('resize', () => {
