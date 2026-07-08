@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Voxel Tokyo Premium - Ver 0.4.0</title>
+    <title>Voxel Tokyo Strike - Ver 0.4.1</title>
     <style>
         :root { --ui-blue: #0044ff; --ui-red: #ff3300; --ui-green: #22cc22; }
         body { margin: 0; overflow: hidden; background: #87CEEB; font-family: sans-serif; touch-action: none; }
@@ -26,7 +26,7 @@
 
     <div id="start-screen" class="screen">
         <h1 style="color: var(--ui-blue); font-size: 36px; margin: 0;">TOKYO DEFENDER</h1>
-        <p>Ver 0.4.0: Premium Tokyo Update</p>
+        <p>Ver 0.4.1: Road & Signal Update</p>
         <button class="start-btn" onpointerdown="handleStartGame()">GAME START</button>
     </div>
 
@@ -46,7 +46,7 @@
         <div id="jump-btn" class="action-btn">JUMP</div>
     </div>
 
-    <div class="version-info">Ver 0.4.0</div>
+    <div class="version-info">Ver 0.4.1</div>
 
     <script type="importmap">
         { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
@@ -63,7 +63,7 @@
         
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB); 
-        scene.fog = new THREE.Fog(0x87CEEB, 20, 180);
+        scene.fog = new THREE.Fog(0x87CEEB, 30, 200);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -74,57 +74,61 @@
         const sunLight = new THREE.DirectionalLight(0xffffff, 1.8);
         sunLight.position.set(50, 120, 50);
         scene.add(sunLight);
-        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
 
-        // --- 自機 (スティーブ風) ---
+        // --- キャラクター (スティーブ風) ---
         const playerGroup = new THREE.Group();
         const mat = (color) => new THREE.MeshPhongMaterial({ color });
+        
         const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), mat(0xffccaa)); head.position.y = 1.6;
         const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.7, 0.3), mat(0x00aaff)); body.position.y = 1.0;
         const armL = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.7, 0.22), mat(0xffccaa)); armL.position.set(0.45, 1.0, 0); armL.geometry.translate(0, -0.3, 0);
         const armR = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.7, 0.22), mat(0xffccaa)); armR.position.set(-0.45, 1.0, 0); armR.geometry.translate(0, -0.3, 0);
         const legL = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.7, 0.25), mat(0x333333)); legL.position.set(0.15, 0.4, 0); legL.geometry.translate(0, -0.3, 0);
         const legR = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.7, 0.25), mat(0x333333)); legR.position.set(-0.15, 0.4, 0); legR.geometry.translate(0, -0.3, 0);
+        
         playerGroup.add(head, body, armL, armR, legL, legR);
         scene.add(playerGroup);
 
-        // --- 街の装飾パーツ作成関数 ---
+        // --- パーツ作成関数 ---
         function createBuilding(x, z, w, d, h) {
             const bGroup = new THREE.Group();
             const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(Math.random() > 0.5 ? 0xeeeeee : 0xcccccc));
             b.position.y = h/2;
             bGroup.add(b);
-
-            // 窓の追加
-            const winGeo = new THREE.BoxGeometry(0.5, 0.5, 0.1);
+            // 窓
             const winMat = mat(0x336699);
-            for(let fy=1; fy<h-1; fy+=2) {
+            for(let fy=2; fy<h-1; fy+=3) {
                 for(let fx=-w/2+1; fx<w/2; fx+=2) {
-                    const win1 = new THREE.Mesh(winGeo, winMat);
-                    win1.position.set(fx, fy, d/2+0.05);
-                    bGroup.add(win1);
-                    const win2 = win1.clone();
-                    win2.position.set(fx, fy, -d/2-0.05);
-                    bGroup.add(win2);
+                    const win = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.1), winMat);
+                    win.position.set(fx, fy, d/2+0.05); bGroup.add(win);
+                    const win2 = win.clone(); win2.position.z = -d/2-0.05; bGroup.add(win2);
                 }
             }
-            // ドア
-            const door = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2, 0.2), mat(0x333333));
-            door.position.set(0, 1, d/2+0.1);
-            bGroup.add(door);
-
             bGroup.position.set(x, 0, z);
             scene.add(bGroup);
             window.state.buildings.push({ x: x, z: z, w: w, d: d });
         }
 
+        function createSignal(x, z) {
+            const signal = new THREE.Group();
+            const pole = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 0.4), mat(0x333333)); pole.position.y = 3; signal.add(pole);
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.5, 0.6), mat(0x111111)); head.position.y = 5.5; signal.add(head);
+            const colors = [0xff0000, 0xffff00, 0x00ff00];
+            colors.forEach((c, i) => {
+                const light = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshBasicMaterial({color: c}));
+                light.position.set(0, 6.1 - i*0.5, 0.35); signal.add(light);
+            });
+            signal.position.set(x, 0, z);
+            scene.add(signal);
+        }
+
         function createTokyoTower(x, z) {
             const tower = new THREE.Group();
-            const colors = [0xff0000, 0xffffff];
-            for(let i=0; i<15; i++) {
-                const size = 6 - i * 0.4;
-                const h = 4;
-                const seg = new THREE.Mesh(new THREE.BoxGeometry(size, h, size), mat(colors[i % 2]));
+            for(let i=0; i<12; i++) {
+                const size = 7 - i * 0.5;
+                const h = 5;
+                const seg = new THREE.Mesh(new THREE.BoxGeometry(size, h, size), mat(i % 2 === 0 ? 0xff3300 : 0xffffff));
                 seg.position.y = i * h + h/2;
                 tower.add(seg);
             }
@@ -133,49 +137,45 @@
             window.state.buildings.push({ x: x, z: z, w: 8, d: 8 });
         }
 
-        function createCar(x, z, color) {
-            const car = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 4), mat(color));
-            body.position.y = 0.6;
-            const top = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.8, 2), mat(0x333333));
-            top.position.y = 1.4;
-            car.add(body, top);
-            car.position.set(x, 0, z);
-            scene.add(car);
-            window.state.buildings.push({ x: x, z: z, w: 2.5, d: 4.5 });
-        }
+        // --- 街の構築 ---
+        function buildCity() {
+            // ベース地面
+            const base = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), mat(0x338833)); base.rotation.x = -Math.PI/2; scene.add(base);
 
-        // --- 都市の構築 ---
-        function buildTokyo() {
-            // 地面
-            const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), mat(0x777777));
-            ground.rotation.x = -Math.PI / 2;
-            scene.add(ground);
-            
-            // 道路・横断歩道
-            const roadGrid = new THREE.GridHelper(400, 20, 0xffffff, 0x555555);
-            scene.add(roadGrid);
+            // 道路作成
+            for(let i=-5; i<=5; i++) {
+                // 縦の道路
+                const roadV = new THREE.Mesh(new THREE.PlaneGeometry(12, 400), mat(0x333333));
+                roadV.rotation.x = -Math.PI/2; roadV.position.set(i*40, 0.01, 0); scene.add(roadV);
+                // 中央線
+                const lineV = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 400), mat(0xffcc00));
+                lineV.rotation.x = -Math.PI/2; lineV.position.set(i*40, 0.02, 0); scene.add(lineV);
+                // 横の道路
+                const roadH = new THREE.Mesh(new THREE.PlaneGeometry(400, 12), mat(0x333333));
+                roadH.rotation.x = -Math.PI/2; roadH.position.set(0, 0.01, i*40); scene.add(roadH);
+                
+                // 交差点の横断歩道と信号
+                for(let j=-5; j<=5; j++) {
+                    // 横断歩道(簡易)
+                    const zebra = new THREE.Mesh(new THREE.PlaneGeometry(8, 4), mat(0xeeeeee));
+                    zebra.rotation.x = -Math.PI/2; zebra.position.set(i*40, 0.03, j*40 + 8); scene.add(zebra);
+                    createSignal(i*40 + 7, j*40 + 7);
+                }
+            }
 
-            // ランドマーク
-            createTokyoTower(30, -50);
-
-            // ビル群
+            // 建物
             for(let i=0; i<60; i++) {
-                let x = Math.random()*240-120;
-                let z = Math.random()*240-120;
-                if(Math.abs(x) < 15) x += 30; // 道路をあける
-                createBuilding(x, z, 8, 8, Math.random()*20+10);
+                let x = Math.random()*300-150; let z = Math.random()*300-150;
+                // 道路(x=n*40, z=n*40)に被らないように配置
+                if (Math.abs(x % 40) < 12 || Math.abs(z % 40) < 12) { x += 15; z += 15; }
+                if (Math.abs(x) < 10 && Math.abs(z) < 10) continue; // スタート地点
+                createBuilding(x, z, 10, 10, Math.random()*20+10);
             }
-
-            // 車
-            for(let i=0; i<15; i++) {
-                createCar(Math.random()*10-5, Math.random()*200-100, 0xffaa00);
-                createCar(Math.random()*10-5, Math.random()*200-100, 0xffffff);
-            }
+            createTokyoTower(60, -60);
         }
-        buildTokyo();
+        buildCity();
 
-        // 当たり判定
+        // 衝突判定
         function checkCollision(nx, nz) {
             const r = 0.6;
             for (let b of window.state.buildings) {
@@ -184,7 +184,7 @@
             return false;
         }
 
-        // 操作・アニメーション
+        // 操作系
         let moveInput = { x: 0, y: 0 };
         let joyTouchId = null; let lookTouchId = null; let lastLookPos = { x: 0, y: 0 };
         let isShooting = false;
@@ -222,8 +222,9 @@
 
         document.getElementById('shoot-btn').onpointerdown = () => isShooting = true;
         document.getElementById('shoot-btn').onpointerup = () => isShooting = false;
-        document.getElementById('jump-btn').onpointerdown = () => { if (window.state.isGrounded) { window.state.vY = 0.26; window.state.isGrounded = false; } };
+        document.getElementById('jump-btn').onpointerdown = () => { if (window.state.isGrounded) { window.state.vY = 0.25; window.state.isGrounded = false; } };
 
+        // メインループ
         window.animate = () => {
             if (!window.state.gameActive) return;
 
@@ -231,78 +232,34 @@
             playerGroup.rotation.y = window.state.camYaw;
             const dirF = new THREE.Vector3(0, 0, -1).applyQuaternion(playerGroup.quaternion);
             const dirS = new THREE.Vector3(1, 0, 0).applyQuaternion(playerGroup.quaternion);
-            const speed = 0.18;
+            const speed = 0.2;
             const nx = playerGroup.position.x + (dirF.x * -moveInput.y + dirS.x * moveInput.x) * speed;
             const nz = playerGroup.position.z + (dirF.z * -moveInput.y + dirS.z * moveInput.x) * speed;
             if (!checkCollision(nx, playerGroup.position.z)) playerGroup.position.x = nx;
             if (!checkCollision(playerGroup.position.x, nz)) playerGroup.position.z = nz;
 
-            // ジャンプ重力
+            // ジャンプ
             playerGroup.position.y += window.state.vY;
-            if (playerGroup.position.y > 0) { window.state.vY -= 0.013; }
+            if (playerGroup.position.y > 0) { window.state.vY -= 0.012; }
             else { playerGroup.position.y = 0; window.state.vY = 0; window.state.isGrounded = true; }
 
-            // 歩行アニメーション
+            // 歩行アニメ
             if(Math.abs(moveInput.x) > 0.1 || Math.abs(moveInput.y) > 0.1) {
                 const s = Date.now() * 0.01;
-                const angle = Math.sin(s) * 0.5;
-                legL.rotation.x = angle; legR.rotation.x = -angle;
-                armL.rotation.x = -angle; armR.rotation.x = angle;
+                armL.rotation.x = Math.sin(s) * 0.8; armR.rotation.x = -Math.sin(s) * 0.8;
+                legL.rotation.x = -Math.sin(s) * 0.8; legR.rotation.x = Math.sin(s) * 0.8;
             } else {
-                legL.rotation.x = legR.rotation.x = armL.rotation.x = armR.rotation.x = 0;
+                armL.rotation.x = armR.rotation.x = legL.rotation.x = legR.rotation.x = 0;
             }
 
-            // カメラ・弾丸・敵・マップ更新 (省略せず前回のロジックを維持)
+            // カメラ
             const camPos = new THREE.Vector3(0, 2.5 + window.state.camPitch * 4, 7).applyQuaternion(playerGroup.quaternion).add(playerGroup.position);
             camera.position.lerp(camPos, 0.15); camera.lookAt(playerGroup.position.clone().add(new THREE.Vector3(0, 1.5, 0)));
 
+            // 弾
             if(isShooting && Date.now() % 10 < 2) {
-                const b = new THREE.Mesh(new THREE.SphereGeometry(0.25), mat(0xffcc00));
+                const b = new THREE.Mesh(new THREE.SphereGeometry(0.2), mat(0xffcc00));
                 b.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.3, 0));
                 const target = new THREE.Vector3(0, window.state.camPitch, -1).applyQuaternion(playerGroup.quaternion).normalize();
                 window.state.bullets.push({mesh: b, dir: target, life: 60}); scene.add(b);
             }
-
-            for(let i = window.state.bullets.length-1; i>=0; i--) {
-                const b = window.state.bullets[i]; b.mesh.position.add(b.dir.clone().multiplyScalar(1.6));
-                if(--b.life < 0) { scene.remove(b.mesh); window.state.bullets.splice(i, 1); continue; }
-                window.state.enemies.forEach((e, ei) => {
-                    if(b.mesh.position.distanceTo(e.mesh.position) < 2.5) {
-                        e.hp--; scene.remove(b.mesh); window.state.bullets.splice(i, 1);
-                        if(e.hp <= 0) { scene.remove(e.mesh); window.state.enemies.splice(ei, 1); window.state.score += 100; document.getElementById('ui-score').innerText = window.state.score; }
-                    }
-                });
-            }
-
-            document.getElementById('minimap-player').style.transform = `rotate(${-window.state.camYaw * 57.3}deg)`;
-            const mapE = document.getElementById('minimap-enemies'); mapE.innerHTML = '';
-            window.state.enemies.forEach(e => {
-                const dx = (e.mesh.position.x - playerGroup.position.x) * 0.5;
-                const dz = (e.mesh.position.z - playerGroup.position.z) * 0.5;
-                const d = document.createElement('div'); d.style.cssText = `position:absolute; width:6px; height:6px; background:red; border-radius:50%; left:calc(50% + ${dx}px); top:calc(50% + ${dz}px);`;
-                mapE.appendChild(d);
-            });
-
-            renderer.render(scene, camera);
-            requestAnimationFrame(window.animate);
-        };
-
-        window.handleStartGame = () => {
-            document.getElementById('start-screen').classList.add('hidden');
-            document.getElementById('hud').classList.remove('hidden');
-            document.getElementById('minimap-container').classList.remove('hidden');
-            document.getElementById('ui-layer').style.display = 'block';
-            window.state.gameActive = true;
-            for(let i=0; i<15; i++) {
-                const e = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), mat(0xff0000));
-                e.position.set(Math.random()*160-80, 5, Math.random()*160-80);
-                window.state.enemies.push({ mesh: e, hp: 2 }); scene.add(e);
-            }
-            window.animate();
-        };
-
-        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
-
-    </script>
-</body>
-</html>
