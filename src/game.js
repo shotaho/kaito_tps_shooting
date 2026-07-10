@@ -14,6 +14,7 @@ const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, .1, 300
 const clock = new THREE.Clock();
 const player = new THREE.Group();
 const enemies = [];
+const bullets = [];
 const blocks = [];
 const input = { x: 0, y: 0, firing: false };
 let yaw = .52, pitch = -.22, velocityY = 0, hp = 100, started = false, finished = false, fireCooldown = 0, elapsed = 0;
@@ -68,23 +69,63 @@ function updatePlayer(dt) {
   const right = new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw)).multiplyScalar(input.x);
   const move = forward.add(right); if(move.lengthSq()>0) { move.normalize().multiplyScalar(9*dt); player.position.add(move); player.rotation.y=Math.atan2(move.x,move.z); }
   velocityY -= 24*dt; player.position.y += velocityY*dt; if(player.position.y<0){ player.position.y=0; velocityY=0; } clampPlayer();
-  const ideal = new THREE.Vector3(0,2.7,6.4).applyAxisAngle(new THREE.Vector3(0,1,0),yaw).add(player.position);
+  const ideal = new THREE.Vector3(0,3.1,10.2).applyAxisAngle(new THREE.Vector3(0,1,0),yaw).add(player.position);
   camera.position.lerp(ideal, 1-Math.exp(-10*dt));
   const target = player.position.clone().add(new THREE.Vector3(0,1.65,0));
-  target.add(new THREE.Vector3(-Math.sin(yaw)*7, Math.sin(pitch)*6, -Math.cos(yaw)*7)); camera.lookAt(target);
+  target.add(new THREE.Vector3(-Math.sin(yaw)*10.8, Math.sin(pitch)*8.2, -Math.cos(yaw)*10.8)); camera.lookAt(target);
 }
 function shoot() {
   if(!started || finished || fireCooldown>0) return; fireCooldown=.16;
-  const origin = camera.position.clone(); const direction = new THREE.Vector3(); camera.getWorldDirection(direction); const ray = new THREE.Raycaster(origin,direction,0,80);
-  const hits = ray.intersectObjects(enemies,true); if(hits.length) { let alien=hits[0].object; while(alien.parent && !enemies.includes(alien)) alien=alien.parent; if(enemies.includes(alien)) { alien.userData.hp--; document.querySelector('#hit-marker').style.opacity=1; setTimeout(()=>document.querySelector('#hit-marker').style.opacity=0,70); if(alien.userData.hp<=0){ scene.remove(alien); enemies.splice(enemies.indexOf(alien),1); } } }
+  const direction = new THREE.Vector3(); camera.getWorldDirection(direction);
+  const origin = camera.position.clone().add(direction.clone().multiplyScalar(1.1));
+  const bullet = new THREE.Mesh(
+    new THREE.SphereGeometry(0.09, 10, 10),
+    new THREE.MeshStandardMaterial({ color: 0xffda66, emissive: 0xffb300, emissiveIntensity: 2, roughness: .2 })
+  );
+  bullet.position.copy(origin);
+  bullet.castShadow = true;
+  scene.add(bullet);
+  bullets.push({
+    mesh: bullet,
+    velocity: direction.multiplyScalar(34),
+    life: 1.2,
+  });
   const flash = new THREE.PointLight(0xffd46b, 7, 12); flash.position.copy(origin); scene.add(flash); setTimeout(()=>scene.remove(flash),45);
   document.querySelector('#enemy-count').textContent=String(enemies.length).padStart(2,'0');
+}
+function updateBullets(dt) {
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    const bullet = bullets[i];
+    bullet.life -= dt;
+    bullet.mesh.position.addScaledVector(bullet.velocity, dt);
+    if (bullet.life <= 0) {
+      scene.remove(bullet.mesh);
+      bullets.splice(i, 1);
+      continue;
+    }
+
+    let hit = false;
+    for (let j = enemies.length - 1; j >= 0; j--) {
+      const alien = enemies[j];
+      if (bullet.mesh.position.distanceTo(alien.position) < 1.15) {
+        alien.userData.hp--;
+        document.querySelector('#hit-marker').style.opacity=1;
+        setTimeout(()=>document.querySelector('#hit-marker').style.opacity=0,70);
+        if(alien.userData.hp<=0){ scene.remove(alien); enemies.splice(j,1); }
+        scene.remove(bullet.mesh);
+        bullets.splice(i, 1);
+        hit = true;
+        break;
+      }
+    }
+    if (hit) continue;
+  }
 }
 function updateEnemies(dt) {
   for(const alien of enemies) { const flat=player.position.clone().sub(alien.position); flat.y=0; const dist=flat.length(); alien.lookAt(player.position.x,alien.position.y,player.position.z); alien.rotation.x=0; alien.rotation.z=0; if(dist>3.2) alien.position.add(flat.normalize().multiplyScalar(alien.userData.speed*dt)); else { alien.userData.cool-=dt; if(alien.userData.cool<0){ alien.userData.cool=.9; hp=Math.max(0,hp-7); const bar=document.querySelector('#hp-bar'); bar.style.width=hp+'%'; bar.style.background=hp<35?'#ef514b':'#42e770'; document.querySelector('#hp').textContent=hp; } } alien.position.y=Math.sin(elapsed*4+alien.userData.bob)*.12; }
 }
 function finish(win) { finished=true; document.querySelector('#result-screen').classList.remove('hidden'); document.querySelector('#result-eyebrow').textContent=win?'MISSION COMPLETE':'MISSION FAILED'; document.querySelector('#result-title').textContent=win?'東京を守り抜いた':'防衛線が突破された'; document.querySelector('#result-copy').textContent=win?'敵性宇宙人の撃退に成功。次の防衛区域に備えよ。':'アーマーが尽きた。装備を整えて再出動せよ。'; }
-function loop() { const dt=Math.min(clock.getDelta(),.05); elapsed+=dt; if(started&&!finished){fireCooldown-=dt; updatePlayer(dt); updateEnemies(dt); if(input.firing)shoot(); if(enemies.length===0)finish(true); if(hp<=0)finish(false);} renderer.render(scene,camera); requestAnimationFrame(loop); }
+function loop() { const dt=Math.min(clock.getDelta(),.05); elapsed+=dt; if(started&&!finished){fireCooldown-=dt; updatePlayer(dt); updateBullets(dt); updateEnemies(dt); if(input.firing)shoot(); if(enemies.length===0)finish(true); if(hp<=0)finish(false);} renderer.render(scene,camera); requestAnimationFrame(loop); }
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight,false);} addEventListener('resize',resize); resize(); loop();
 
 const moveZone=document.querySelector('#move-zone'), stick=document.querySelector('#stick'); let moveTouch=null, lookTouch=null, lookPoint=null;
