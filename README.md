@@ -1,1 +1,0 @@
-# kaito_tps_shooting

@@ -1,179 +1,50 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Voxel Tokyo Strike - Ver 0.4.5</title>
-    <style>
-        :root { --ui-blue: #0044ff; --ui-red: #ff3300; --ui-green: #22cc22; }
-        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: sans-serif; touch-action: none; }
-        canvas { display: block; width: 100vw; height: 100vh; }
-
-        /* デバッグログ */
-        #status-log { 
-            position: absolute; top: 5px; left: 50%; transform: translateX(-50%); 
-            font-size: 10px; color: white; background: rgba(0,0,0,0.5); padding: 2px 10px; 
-            z-index: 2000; pointer-events: none; 
-        }
-
-        /* HUD */
-        #hud { 
-            position: absolute; top: 15px; left: 15px; color: #000; 
-            pointer-events: none; font-weight: bold; z-index: 50; 
-            background: rgba(255,255,255,0.7); padding: 10px; border-radius: 8px; 
-        }
-        
-        #minimap-container { 
-            position: absolute; top: 60px; right: 15px; width: 100px; height: 100px; 
-            background: rgba(0, 0, 0, 0.4); border: 2px solid white; border-radius: 50%; 
-            overflow: hidden; z-index: 50; 
-        }
-        
-        .version-info { 
-            position: absolute; top: 10px; right: 15px; font-size: 12px; 
-            background: rgba(255,255,255,0.8); padding: 2px 8px; border-radius: 4px; 
-            color: #333; font-weight: bold; z-index: 100;
-        }
-
-        /* 操作UI */
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 200; }
-        
-        #joystick-bound { 
-            position: absolute; bottom: 30px; left: 30px; width: 110px; height: 110px; 
-            border: 4px solid white; border-radius: 50%; pointer-events: auto; background: rgba(255,255,255,0.2); 
-        }
-        #joystick-stick { position: absolute; top: 30px; left: 30px; width: 50px; height: 50px; background: white; border-radius: 50%; }
-        
-        .action-btn { 
-            position: absolute; pointer-events: auto; border: 4px solid white; border-radius: 50%; 
-            display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; 
-            user-select: none;
-        }
-        #shoot-btn { bottom: 30px; right: 30px; width: 90px; height: 90px; background: var(--ui-red); font-size: 20px; }
-        #jump-btn { bottom: 135px; right: 40px; width: 60px; height: 60px; background: var(--ui-green); font-size: 14px; }
-    </style>
-</head>
-<body>
-
-    <div id="status-log">SYSTEM: LOADING...</div>
-    <div class="version-info">Ver 0.4.5</div>
-
-    <div id="hud">
-        SCORE: <span id="ui-score">0</span><br>
-        HP: <span id="ui-hp">100</span>%
-    </div>
-
-    <div id="minimap-container">
-        <div id="minimap-enemies" style="position:relative; width:100%; height:100%;"></div>
-        <div id="minimap-player" style="position:absolute; top:50%; left:50%; width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-bottom:10px solid #fff; margin-left:-5px; margin-top:-7px;"></div>
-    </div>
-
-    <div id="ui-layer">
-        <div id="joystick-bound"><div id="joystick-stick"></div></div>
-        <div id="shoot-btn" class="action-btn">FIRE</div>
-        <div id="jump-btn" class="action-btn">JUMP</div>
-    </div>
-
-    <script type="module">
-        import * as THREE from 'https://cdn.skypack.dev/three@0.160.0';
-
-        const log = (msg) => { document.getElementById('status-log').innerText = "SYSTEM: " + msg; };
-
-        try {
-            // --- 1. 基本設定 ---
-            const state = { 
-                gameActive: true, score: 0, hp: 100, 
-                enemies: [], bullets: [], buildings: [],
-                camYaw: 0, camPitch: 0, vY: 0, isGrounded: true
-            };
-            
-            const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87CEEB); 
-            scene.fog = new THREE.Fog(0x87CEEB, 40, 250);
-
-            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            const renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            document.body.appendChild(renderer.domElement);
-
-            const sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
-            sunLight.position.set(50, 100, 50);
-            scene.add(sunLight);
-            scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-
-            const mat = (color) => new THREE.MeshPhongMaterial({ color });
-
-            // --- 2. キャラクター作成 ---
-            const playerGroup = new THREE.Group();
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), mat(0xffccaa)); head.position.y = 1.6;
-            const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.7, 0.3), mat(0x00aaff)); body.position.y = 1.0;
-            const armL = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.7, 0.22), mat(0xffccaa)); armL.position.set(0.45, 1.0, 0); armL.geometry.translate(0, -0.3, 0);
-            const armR = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.7, 0.22), mat(0xffccaa)); armR.position.set(-0.45, 1.0, 0); armR.geometry.translate(0, -0.3, 0);
-            const legL = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.7, 0.25), mat(0x333333)); legL.position.set(0.15, 0.4, 0); legL.geometry.translate(0, -0.3, 0);
-            const legR = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.7, 0.25), mat(0x333333)); legR.position.set(-0.15, 0.4, 0); legR.geometry.translate(0, -0.3, 0);
-            playerGroup.add(head, body, armL, armR, legL, legR);
-            scene.add(playerGroup);
-
-            // --- 3. 街の構築 ---
-            function buildCity() {
-                const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), mat(0x44aa44));
-                ground.rotation.x = -Math.PI/2; scene.add(ground);
-
-                // 道路
-                for(let i=-2; i<=2; i++) {
-                    const roadV = new THREE.Mesh(new THREE.PlaneGeometry(14, 400), mat(0x333333));
-                    roadV.rotation.x = -Math.PI/2; roadV.position.set(i*60, 0.01, 0); scene.add(roadV);
-                    const roadH = new THREE.Mesh(new THREE.PlaneGeometry(400, 14), mat(0x333333));
-                    roadH.rotation.x = -Math.PI/2; roadH.position.set(0, 0.01, i*60); scene.add(roadH);
-                }
-
-                // ビル
-                for(let i=0; i<35; i++) {
-                    let x = Math.random()*200-100; let z = Math.random()*200-100;
-                    if(Math.abs(x%60) < 15 || Math.abs(z%60) < 15) { x+=20; z+=20; }
-                    if(Math.abs(x)<10 && Math.abs(z)<10) continue; 
-                    const h = Math.random()*20+5;
-                    const b = new THREE.Mesh(new THREE.BoxGeometry(10,h,10), mat(0xdddddd));
-                    b.position.set(x, h/2, z); scene.add(b);
-                    state.buildings.push({x, z, w:10, d:10});
-                }
-                
-                // 東京タワー(簡易)
-                const tower = new THREE.Mesh(new THREE.BoxGeometry(6, 60, 6), mat(0xff3300));
-                tower.position.set(50, 30, -50); scene.add(tower);
-                state.buildings.push({x:50, z:-50, w:6, d:6});
-            }
-            buildCity();
-
-            // 衝突判定
-            const checkCollision = (nx, nz) => {
-                const r = 0.7;
-                for (let b of state.buildings) {
-                    if (nx > b.x-b.w/2-r && nx < b.x+b.w/2+r && nz > b.z-b.d/2-r && nz < b.z+b.d/2+r) return true;
-                }
-                return false;
-            };
-
-            // --- 4. 操作ロジック ---
-            let moveInput = { x: 0, y: 0 };
-            let joyTouchId = null, lookTouchId = null, lastLookPos = { x: 0, y: 0 }, isShooting = false;
-
-            window.addEventListener('touchstart', e => {
-                for(let t of e.changedTouches) {
-                    if(t.clientX < window.innerWidth / 2) joyTouchId = t.identifier;
-                    else { lookTouchId = t.identifier; lastLookPos = { x: t.clientX, y: t.clientY }; }
-                }
-            }, { passive: false });
-
-            window.addEventListener('touchmove', e => {
-                for(let t of e.changedTouches) {
-                    if(t.identifier === joyTouchId) {
-                        const rect = document.getElementById('joystick-bound').getBoundingClientRect();
-                        moveInput.x = (t.clientX - (rect.left + rect.width/2)) / (rect.width/2);
-                        moveInput.y = (t.clientY - (rect.top + rect.height/2)) / (rect.height/2);
-                        document.getElementById('joystick-stick').style.transform = `translate(${Math.max(-1, Math.min(1, moveInput.x)) * 35}px, ${Math.max(-1, Math.min(1, moveInput.y)) * 35}px)`;
-                    } else if(t.identifier === lookTouchId) {
-                        state.camYaw -= (t.clientX - lastLookPos.x) * 0.01;
-                        state.camPitch = Math.max(-0.6, Math.min(0.6, state.camPitch - (t.clientY - lastLookPos.y) * 0.01));
-                        lastLookPos = { x: t.clientX, y: t.clientY };
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#071a2d" />
+    <title>TOKYO DEFENSE // PROTOTYPE</title>
+  </head>
+  <body>
+    <main id="app">
+      <canvas id="game"></canvas>
+      <section id="hud" aria-live="polite">
+        <div class="topbar">
+          <div class="brand"><span>EDF //</span> TOKYO DEFENSE</div>
+          <div class="objective"><small>MISSION 01</small><strong id="objective">東京を防衛せよ</strong></div>
+        </div>
+        <div class="status">
+          <div class="health"><span>ARMOR</span><div class="meter"><i id="hp-bar"></i></div><b id="hp">100</b></div>
+          <div class="enemy-count"><span>HOSTILES</span><b id="enemy-count">08</b></div>
+        </div>
+        <div id="crosshair" aria-hidden="true">+</div>
+        <div id="hit-marker" aria-hidden="true">×</div>
+        <p id="hint">左スティックで移動　右側をスワイプして視点操作</p>
+      </section>
+      <section id="controls" aria-label="ゲーム操作">
+        <div id="move-zone" class="move-zone" aria-label="移動スティック"><div id="stick" class="stick"></div></div>
+        <button id="jump" class="action jump" aria-label="ジャンプ">JUMP</button>
+        <button id="attack" class="action attack" aria-label="攻撃">FIRE</button>
+      </section>
+      <section id="start-screen" class="overlay">
+        <div class="card">
+          <p class="eyebrow">BLOCK DEFENSE FORCE</p>
+          <h1>TOKYO<br><em>DEFENSE</em></h1>
+          <p>未知の宇宙人が東京に侵攻。ブロック都市を駆け抜け、すべての敵を排除せよ。</p>
+          <button id="start" class="primary">出動する</button>
+          <small>移動：左スティック / 視点：画面右側をスワイプ / 攻撃・ジャンプ：ボタン</small>
+        </div>
+      </section>
+      <section id="result-screen" class="overlay hidden">
+        <div class="card">
+          <p class="eyebrow" id="result-eyebrow">MISSION COMPLETE</p>
+          <h2 id="result-title">東京を守り抜いた</h2>
+          <p id="result-copy"></p>
+          <button id="restart" class="primary">もう一度出動</button>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/src/game.js"></script>
+  </body>
+</html>
