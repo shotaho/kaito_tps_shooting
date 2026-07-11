@@ -1,6 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 
-const APP_VERSION = 'Ver 0.5.1';
+const APP_VERSION = 'Ver 0.5.2';
 const SAVE_KEY = 'tokyo-defense-loadout';
 const yAxis = new THREE.Vector3(0, 1, 0);
 
@@ -112,6 +112,8 @@ function colorToCss(value) {
 }
 
 function hideAllOverlays() {
+  document.documentElement.classList.remove('settings-open');
+  document.body.classList.remove('settings-open');
   startScreen.classList.add('hidden');
   settingsScreen.classList.add('hidden');
   resultScreen.classList.add('hidden');
@@ -124,6 +126,8 @@ function showStartScreen() {
 
 function showSettingsScreen() {
   hideAllOverlays();
+  document.documentElement.classList.add('settings-open');
+  document.body.classList.add('settings-open');
   settingsScreen.classList.remove('hidden');
 }
 
@@ -501,7 +505,7 @@ function createPlayer() {
   headGroup.add(hairGroup);
 
   faceFeatureGroup = new THREE.Group();
-  faceFeatureGroup.position.z = 0.26;
+  faceFeatureGroup.position.z = -0.66;
   headGroup.add(faceFeatureGroup);
 
   weaponGroup = new THREE.Group();
@@ -609,12 +613,11 @@ function updatePlayer(dt) {
   }
   clampPlayer();
 
-  const camYaw = yaw - 0.48;
-  const ideal = new THREE.Vector3(2.4, 3.15, 10.6).applyAxisAngle(yAxis, camYaw).add(player.position);
+  const ideal = new THREE.Vector3(2.8, 5.8, 12.6).applyAxisAngle(yAxis, yaw).add(player.position);
   camera.position.lerp(ideal, 1 - Math.exp(-10 * dt));
 
-  const forwardLook = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).multiplyScalar(2.35);
-  const target = player.position.clone().add(new THREE.Vector3(0, 1.58, 0)).add(forwardLook);
+  const forwardLook = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).multiplyScalar(4.2);
+  const target = player.position.clone().add(new THREE.Vector3(0, 1.55, 0)).add(forwardLook);
   camera.lookAt(target);
 }
 
