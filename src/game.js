@@ -1,6 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 
-const APP_VERSION = 'Ver 0.5.2';
+const APP_VERSION = 'Ver 0.5.3';
 const SAVE_KEY = 'tokyo-defense-loadout';
 const yAxis = new THREE.Vector3(0, 1, 0);
 
@@ -378,6 +378,10 @@ const player = new THREE.Group();
 const enemies = [];
 const bullets = [];
 const blocks = [];
+const occlusionRaycaster = new THREE.Raycaster();
+const cameraFocus = new THREE.Vector3();
+const cameraRayDirection = new THREE.Vector3();
+const fadedBuildings = new Set();
 const input = { x: 0, y: 0, firing: false };
 let yaw = 0.52;
 let pitch = -0.22;
@@ -581,6 +585,30 @@ function playerCollisionAt(x, z) {
   return false;
 }
 
+function updateBuildingOcclusion() {
+  fadedBuildings.clear();
+  cameraFocus.copy(player.position).add(new THREE.Vector3(0, 1.7, 0));
+  cameraRayDirection.copy(cameraFocus).sub(camera.position);
+  const distanceToPlayer = cameraRayDirection.length();
+  cameraRayDirection.normalize();
+  occlusionRaycaster.set(camera.position, cameraRayDirection);
+
+  const hits = occlusionRaycaster.intersectObjects(blocks.map((block) => block.mesh), false);
+  hits.forEach((hit) => {
+    if (hit.distance < distanceToPlayer - 0.5) fadedBuildings.add(hit.object);
+  });
+
+  blocks.forEach(({ mesh }) => {
+    const shouldFade = fadedBuildings.has(mesh);
+    if (mesh.userData.fadedForCamera === shouldFade) return;
+    mesh.userData.fadedForCamera = shouldFade;
+    mesh.material.transparent = shouldFade;
+    mesh.material.opacity = shouldFade ? 0.24 : 1;
+    mesh.material.depthWrite = !shouldFade;
+    mesh.material.needsUpdate = true;
+  });
+}
+
 function getAimDirection() {
   const aimYaw = player.rotation.y;
   return new THREE.Vector3(
@@ -616,9 +644,9 @@ function updatePlayer(dt) {
   const ideal = new THREE.Vector3(2.8, 5.8, 12.6).applyAxisAngle(yAxis, yaw).add(player.position);
   camera.position.lerp(ideal, 1 - Math.exp(-10 * dt));
 
-  const forwardLook = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).multiplyScalar(4.2);
-  const target = player.position.clone().add(new THREE.Vector3(0, 1.55, 0)).add(forwardLook);
+  const target = player.position.clone().add(new THREE.Vector3(0, 1.7, 0)).add(getAimDirection().multiplyScalar(12));
   camera.lookAt(target);
+  updateBuildingOcclusion();
 }
 
 function shoot() {
@@ -872,6 +900,9 @@ function wireUI() {
   });
 
   const attack = document.querySelector('#attack');
+  attack.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+  });
   attack.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     input.firing = true;
