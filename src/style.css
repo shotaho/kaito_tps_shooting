@@ -3,6 +3,7 @@
 :root { color: #f3fbff; background: #061321; font-family: 'Noto Sans JP', system-ui, sans-serif; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body, #app { width: 100%; height: 100%; margin: 0; overflow: hidden; touch-action: none; }
+html.settings-open, body.settings-open { overflow: auto; touch-action: pan-y; }
 canvas { display: block; width: 100%; height: 100%; }
 #hud, #controls, .overlay { position: fixed; inset: 0; pointer-events: none; }
 .topbar { display: flex; justify-content: space-between; align-items: flex-start; padding: max(18px, env(safe-area-inset-top)) 22px 0; text-shadow: 0 2px 4px #000; }
@@ -20,8 +21,9 @@ canvas { display: block; width: 100%; height: 100%; }
 .button-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 10px 0 0; }
 .secondary { border: 1px solid rgba(255,255,255,.35); padding: 14px 20px; background: rgba(10, 32, 52, .78); color: #f3fbff; font: 14px 'Black Ops One'; letter-spacing: .08em; box-shadow: 4px 4px 0 #02081188; cursor:pointer; }
 .secondary:hover, .primary:hover { transform: translateY(-1px); }
-.settings-card { width: min(640px, 100%); text-align: left; }
+.settings-card { width: min(640px, 100%); text-align: left; max-height: min(88vh, 920px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
 .settings-card h2 { margin-top: 4px; margin-bottom: 8px; text-align: center; }
+#settings-screen { overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; align-items: flex-start; }
 .appearance-preview { margin-top: 18px; padding: 16px; border: 1px solid rgba(255,255,255,.16); border-radius: 18px; background: linear-gradient(180deg, rgba(17, 38, 61, .92), rgba(8, 20, 35, .96)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.04); }
 .preview-stage { position: relative; display: grid; place-items: center; min-height: 180px; overflow: hidden; border-radius: 16px; background: radial-gradient(circle at 50% 24%, rgba(87, 169, 240, .34), rgba(12, 26, 43, .92) 52%, rgba(6, 16, 30, 1)); }
 .preview-stage::before { content: ''; position: absolute; inset: auto 0 0 0; height: 54px; background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0)); clip-path: polygon(0 100%, 100% 100%, 100% 40%, 0 70%); }
@@ -81,4 +83,4 @@ canvas { display: block; width: 100%; height: 100%; }
 .settings-grid select { width: 100%; padding: 12px 12px; border: 1px solid rgba(255,255,255,.16); border-radius: 10px; background: rgba(255,255,255,.08); color: #f3fbff; font: 14px 'Noto Sans JP', system-ui, sans-serif; }
 .settings-grid option { color: #061321; }
 @media (min-width: 700px) { .move-zone { left:50px; bottom:45px; } .attack { right:48px; bottom:45px; } .jump { right:74px; bottom:142px; } }
-@media (max-width: 560px) { .settings-grid { grid-template-columns: 1fr; } .settings-card { width: min(100%, 480px); } .preview-stage { min-height: 160px; } }
+@media (max-width: 560px) { .settings-grid { grid-template-columns: 1fr; } .settings-card { width: min(100%, 480px); max-height: calc(100vh - 32px); } .preview-stage { min-height: 160px; } }
