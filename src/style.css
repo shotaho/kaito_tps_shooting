@@ -4,6 +4,7 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body, #app { width: 100%; height: 100%; margin: 0; overflow: hidden; touch-action: none; }
 html.settings-open, body.settings-open { overflow: auto; touch-action: pan-y; }
+body, button { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 canvas { display: block; width: 100%; height: 100%; }
 #hud, #controls, .overlay { position: fixed; inset: 0; pointer-events: none; }
 .topbar { display: flex; justify-content: space-between; align-items: flex-start; padding: max(18px, env(safe-area-inset-top)) 22px 0; text-shadow: 0 2px 4px #000; }
