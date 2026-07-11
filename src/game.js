@@ -107,6 +107,10 @@ function fillSelect(select, options) {
   options.forEach((option) => createOption(select, option));
 }
 
+function colorToCss(value) {
+  return `#${resolveColor(value).toString(16).padStart(6, '0')}`;
+}
+
 function hideAllOverlays() {
   startScreen.classList.add('hidden');
   settingsScreen.classList.add('hidden');
@@ -139,6 +143,7 @@ function syncUIFromConfig() {
   hairStyleSelect.value = config.hairStyle;
   eyeStyleSelect.value = config.eyeStyle;
   mouthStyleSelect.value = config.mouthStyle;
+  updateSettingsPreview();
 }
 
 function readConfigFromUI() {
@@ -159,6 +164,7 @@ function applyConfig(nextConfig) {
   syncUIFromConfig();
   updateAppearance();
   buildWeapon(config.weaponShape);
+  updateSettingsPreview();
 }
 
 function createButtonMaterial(color) {
@@ -326,6 +332,21 @@ function updateAppearance() {
   buildFace(config.eyeStyle, config.mouthStyle);
 }
 
+function updateSettingsPreview() {
+  if (!appearancePreview) return;
+
+  appearancePreview.style.setProperty('--preview-body', colorToCss(config.bodyColor));
+  appearancePreview.style.setProperty('--preview-skin', colorToCss(config.skinColor));
+  appearancePreview.style.setProperty('--preview-weapon', colorToCss(config.weaponColor));
+
+  previewFigure.dataset.hair = config.hairStyle;
+  previewWeapon.dataset.shape = config.weaponShape;
+  previewEyes.forEach((eye) => {
+    eye.dataset.style = config.eyeStyle;
+  });
+  previewMouth.dataset.style = config.mouthStyle;
+}
+
 const canvas = document.querySelector('#game');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
@@ -385,6 +406,11 @@ const resultEyebrow = document.querySelector('#result-eyebrow');
 const resultTitle = document.querySelector('#result-title');
 const resultCopy = document.querySelector('#result-copy');
 const objectiveText = document.querySelector('#objective');
+const appearancePreview = document.querySelector('.appearance-preview');
+const previewFigure = document.querySelector('.preview-figure');
+const previewEyes = document.querySelectorAll('.preview-eye');
+const previewMouth = document.querySelector('.preview-mouth');
+const previewWeapon = document.querySelector('.preview-weapon');
 
 versionBadge.textContent = APP_VERSION;
 document.querySelectorAll('.app-version-line').forEach((node) => {
