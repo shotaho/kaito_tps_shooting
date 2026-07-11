@@ -1,6 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 
-const APP_VERSION = 'Ver 0.5.0';
+const APP_VERSION = 'Ver 0.5.1';
 const SAVE_KEY = 'tokyo-defense-loadout';
 const yAxis = new THREE.Vector3(0, 1, 0);
 
@@ -357,6 +357,17 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x79b8d5);
 scene.fog = new THREE.Fog(0x79b8d5, 35, 150);
+scene.add(new THREE.HemisphereLight(0xdff6ff, 0x31452f, 2.2));
+const sun = new THREE.DirectionalLight(0xfff4d6, 2.8);
+sun.position.set(-40, 65, 25);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.camera.left = -70;
+sun.shadow.camera.right = 70;
+sun.shadow.camera.top = 70;
+sun.shadow.camera.bottom = -70;
+scene.add(sun);
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
 const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 300);
 const clock = new THREE.Clock();
 const player = new THREE.Group();
@@ -431,13 +442,21 @@ Object.entries(OPTIONS).forEach(([key, options]) => {
 });
 
 function createCityBlock(w, h, d, color, x, y, z) {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color, roughness: 0.85, flatShading: true }));
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color, roughness: 0.9, flatShading: true }));
   mesh.position.set(x, y, z);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   scene.add(mesh);
   return mesh;
 }
+
+const ground = new THREE.Mesh(
+  new THREE.BoxGeometry(220, 1, 220),
+  new THREE.MeshStandardMaterial({ color: 0x667f63, roughness: 1, flatShading: true }),
+);
+ground.position.set(0, -0.5, 0);
+ground.receiveShadow = true;
+scene.add(ground);
 
 function makeCity() {
   const roads = [-18, 0, 18];
