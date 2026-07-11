@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="./src/style.css" />
   </head>
   <body>
+    <div id="app-version" class="version-badge">Ver 0.5.0</div>
     <main id="app">
       <canvas id="game"></canvas>
       <section id="hud" aria-live="polite">
@@ -32,9 +33,55 @@
         <div class="card">
           <p class="eyebrow">BLOCK DEFENSE FORCE</p>
           <h1>TOKYO<br><em>DEFENSE</em></h1>
+          <p class="app-version-line">Ver 0.5.0</p>
           <p>未知の宇宙人が東京に侵攻。ブロック都市を駆け抜け、すべての敵を排除せよ。</p>
-          <button id="start" class="primary">出動する</button>
+          <div class="button-row">
+            <button id="open-settings" class="secondary">外観を設定</button>
+            <button id="start" class="primary">出動する</button>
+          </div>
           <small>移動：左スティック / 視点：画面右側をスワイプ / 攻撃・ジャンプ：ボタン</small>
+        </div>
+      </section>
+      <section id="settings-screen" class="overlay hidden">
+        <div class="card settings-card">
+          <p class="eyebrow">LOADOUT / APPEARANCE</p>
+          <h2>見た目と武器を選ぶ</h2>
+          <p class="app-version-line">Ver 0.5.0</p>
+          <div class="settings-grid">
+            <label>
+              <span>武器の形</span>
+              <select id="weapon-shape"></select>
+            </label>
+            <label>
+              <span>武器の色</span>
+              <select id="weapon-color"></select>
+            </label>
+            <label>
+              <span>服の色</span>
+              <select id="body-color"></select>
+            </label>
+            <label>
+              <span>肌の色</span>
+              <select id="skin-color"></select>
+            </label>
+            <label>
+              <span>髪型</span>
+              <select id="hair-style"></select>
+            </label>
+            <label>
+              <span>目の形</span>
+              <select id="eye-style"></select>
+            </label>
+            <label>
+              <span>口の形</span>
+              <select id="mouth-style"></select>
+            </label>
+          </div>
+          <div class="button-row">
+            <button id="back-from-settings" class="secondary">戻る</button>
+            <button id="apply-settings" class="primary">この設定で出動</button>
+          </div>
+          <small>選択は自動保存され、次回起動時も引き継がれます。</small>
         </div>
       </section>
       <section id="result-screen" class="overlay hidden">
